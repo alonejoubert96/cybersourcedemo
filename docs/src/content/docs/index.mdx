@@ -1,0 +1,57 @@
+---
+title: CyberSource Payment Demo
+description: A Spring Boot demo showcasing CyberSource payment integration across multiple payment methods.
+template: splash
+hero:
+  tagline: Explore card payments, digital wallets, EFT, tokenization, invoices, and payment links — all powered by the CyberSource REST SDK.
+  actions:
+    - text: Get Started
+      link: /getting-started/introduction/
+      icon: right-arrow
+    - text: Open Live Demo
+      link: http://localhost:8080
+      variant: minimal
+      attrs:
+        target: _blank
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## Live Demo
+
+Once the app is running (`./gradlew bootRun`), open **[http://localhost:8080](http://localhost:8080)** to access the interactive demo UI. All forms are pre-filled with valid sandbox test data — just click and submit.
+
+## Payment Methods
+
+<CardGrid stagger>
+	<Card title="Card Payments" icon="seti:html">
+		Authorize, sale, capture, refund, and void credit card transactions.
+
+		[Docs →](/flows/card-payments/) · [Demo →](http://localhost:8080/checkout/card)
+	</Card>
+	<Card title="Digital Wallets" icon="seti:favicon">
+		Google Pay, Apple Pay, and Samsung Pay via a single unified service.
+
+		[Docs →](/flows/digital-wallets/) · [Demo →](http://localhost:8080/checkout/wallet)
+	</Card>
+	<Card title="EFT / eCheck" icon="seti:bicep">
+		ACH bank account payments using routing and account numbers.
+
+		[Docs →](/flows/eft-echeck/) · [Demo →](http://localhost:8080/checkout/eft)
+	</Card>
+	<Card title="Tokenized Payments" icon="seti:lock">
+		Store cards for returning shoppers and pay with customer tokens.
+
+		[Docs →](/flows/tokenized-payments/) · [Demo →](http://localhost:8080/checkout/token)
+	</Card>
+	<Card title="Invoices" icon="seti:pdf">
+		Create and send invoices to customers via email.
+
+		[Docs →](/flows/invoices/) · [Demo →](http://localhost:8080/checkout/invoice)
+	</Card>
+	<Card title="Payment Links" icon="seti:url">
+		Generate shareable payment URLs for easy checkout.
+
+		[Docs →](/flows/payment-links/) · [Demo →](http://localhost:8080/checkout/payment-link)
+	</Card>
+</CardGrid>

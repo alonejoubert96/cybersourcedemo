@@ -1,0 +1,10 @@
+cybersource:
+  merchant-id: testrest
+  run-environment: apitest.cybersource.com
+  authentication-type: http_signature
+  merchant-key-id: ${CYBERSOURCE_KEY_ID:08c94330-f618-42a3-b09d-e1e43be5efda}
+  merchant-secret-key: ${CYBERSOURCE_SECRET_KEY:yBJxy6LjM2TmcPGu+GaJrHtkke25fPpUX+UY6/L/1tE=}
+
+spring:
+  thymeleaf:
+    cache: false

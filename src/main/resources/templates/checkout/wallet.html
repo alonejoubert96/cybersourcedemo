@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Wallet Payment')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<div class="container" style="max-width: 600px;">
+    <h2 class="mb-2">Digital Wallet Payment</h2>
+    <p class="text-muted mb-4">Google Pay, Apple Pay, Samsung Pay &mdash; same API, different payment solution codes</p>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <form id="walletForm">
+                <div class="mb-3">
+                    <label class="form-label">Wallet Type</label>
+                    <select name="walletType" id="walletType" class="form-select" required>
+                        <option th:each="wt : ${walletTypes}" th:value="${wt.name()}" th:text="${wt.displayName}"></option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Token Data (DPAN)</label>
+                    <input type="text" name="tokenData" class="form-control" value="4111111111111111" required>
+                    <div class="form-text">In production, this comes from the wallet SDK. Simulated here with a test card number.</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col">
+                        <label class="form-label">Exp Month</label>
+                        <input type="text" name="expirationMonth" class="form-control" value="12" required>
+                    </div>
+                    <div class="col">
+                        <label class="form-label">Exp Year</label>
+                        <input type="text" name="expirationYear" class="form-control" value="2026" required>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Cryptogram</label>
+                    <input type="text" name="cryptogram" class="form-control"
+                           value="EHuWW9PiBkWvqE5juRwDzAUFBAk=" required>
+                    <div class="form-text">Base64-encoded network token cryptogram.</div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col">
+                        <label class="form-label">Amount</label>
+                        <input type="number" name="amount" class="form-control" value="102.21" step="0.01" required>
+                    </div>
+                    <div class="col">
+                        <label class="form-label">Currency</label>
+                        <input type="text" name="currency" class="form-control" value="USD" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">Pay with Wallet</button>
+            </form>
+            <div id="walletResult" class="result-box mt-3"></div>
+        </div>
+    </div>
+
+    <a href="/" class="btn btn-outline-secondary w-100 mb-4">&larr; Back to Home</a>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/demo.js"></script>
+<script>
+document.getElementById('walletForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    var btn = this.querySelector('button[type="submit"]');
+    setLoading(btn, true);
+    var walletType = document.getElementById('walletType').value;
+    var f = this;
+    var result = await callApi('/api/payments/wallet/' + walletType, 'POST', {
+        tokenData: f.tokenData.value,
+        expirationMonth: f.expirationMonth.value,
+        expirationYear: f.expirationYear.value,
+        cryptogram: f.cryptogram.value,
+        amount: parseFloat(f.amount.value),
+        currency: f.currency.value
+    });
+    setLoading(btn, false);
+    showResult('walletResult', result);
+});
+</script>
+</body>
+</html>

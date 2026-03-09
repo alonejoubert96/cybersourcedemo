@@ -1,0 +1,48 @@
+# === Java / Gradle ===
+build/
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
+*.class
+*.jar
+!gradle-wrapper.jar
+*.war
+bin/
+
+# === IDE ===
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+*.swp
+*~
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Logs ===
+*.log
+logs/
+
+# === Claude Code (local settings) ===
+.claude/
+
+# === Environment / Secrets ===
+.env
+.env.*
+!.env.example
+
+# === Node (docs + e2e) ===
+node_modules/
+
+# === Playwright ===
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+
+# === Astro docs build ===
+docs/dist/
