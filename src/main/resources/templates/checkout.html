@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Checkout — CyberShop')}"></head>
+<body>
+<nav th:replace="~{fragments/layout :: navbar}"></nav>
+
+<!-- Checkout Wizard -->
+<div id="checkoutPage" class="container my-4" style="max-width: 680px;">
+    <div class="d-flex align-items-center mb-4">
+        <a id="backBtn" class="text-dark fs-4" style="cursor:pointer;" onclick="wizardBack()">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h2 class="flex-grow-1 text-center mb-0" style="letter-spacing: 3px; font-weight: 700; color: var(--cs-primary);">CHECKOUT</h2>
+        <div style="width: 24px;"></div>
+    </div>
+    <div id="wizardContent"></div>
+</div>
+
+<!-- Confirmation (replaces checkout) -->
+<div id="confirmationPage" style="display:none;">
+    <div class="container my-4" style="max-width: 900px;">
+        <div id="confirmationContent"></div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/store.js"></script>
+<script>initCheckout();</script>
+</body>
+</html>
