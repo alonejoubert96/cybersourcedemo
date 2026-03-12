@@ -1,99 +1,38 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="~{fragments/layout :: head('CyberSource Payment Demo')}"></head>
+<head th:replace="~{fragments/layout :: head('CyberShop — Secure Payment Demo')}"></head>
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
 
-<div class="container">
-    <h2 class="mb-2">Choose a Payment Method</h2>
-    <p class="text-muted mb-4">Each flow demonstrates a different CyberSource integration &mdash; all pre-filled with valid sandbox test data.</p>
-    <div class="row g-4">
-
-        <div class="col-md-4">
-            <a href="/checkout/card" class="text-decoration-none">
-                <div class="card card-hover h-100">
-                    <div class="card-body text-center">
-                        <h4 class="card-title text-dark">Credit Card</h4>
-                        <p class="card-text text-muted">Authorize, Capture, Refund, Void, and Sale &mdash; full payment lifecycle</p>
-                        <span class="badge bg-primary">5 operations</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-4">
-            <a href="/checkout/wallet" class="text-decoration-none">
-                <div class="card card-hover h-100">
-                    <div class="card-body text-center">
-                        <h4 class="card-title text-dark">Digital Wallets</h4>
-                        <p class="card-text text-muted">Google Pay, Apple Pay, Samsung Pay via tokenized card + cryptogram</p>
-                        <span class="badge bg-primary">3 wallet types</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-4">
-            <a href="/checkout/eft" class="text-decoration-none">
-                <div class="card card-hover h-100">
-                    <div class="card-body text-center">
-                        <h4 class="card-title text-dark">EFT / eCheck</h4>
-                        <p class="card-text text-muted">ACH bank account debit with routing and account numbers</p>
-                        <span class="badge bg-primary">Bank transfer</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-4">
-            <a href="/checkout/token" class="text-decoration-none">
-                <div class="card card-hover h-100">
-                    <div class="card-body text-center">
-                        <h4 class="card-title text-dark">Tokenized Payments</h4>
-                        <p class="card-text text-muted">Store card &rarr; pay with token. No card details on repeat charges</p>
-                        <span class="badge bg-primary">2-step flow</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-4">
-            <a href="/checkout/invoice" class="text-decoration-none">
-                <div class="card card-hover h-100">
-                    <div class="card-body text-center">
-                        <h4 class="card-title text-dark">Invoices</h4>
-                        <p class="card-text text-muted">Create &rarr; send invoices. CyberSource emails a hosted payment page</p>
-                        <span class="badge bg-primary">Create &amp; send</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-4">
-            <a href="/checkout/payment-link" class="text-decoration-none">
-                <div class="card card-hover h-100">
-                    <div class="card-body text-center">
-                        <h4 class="card-title text-dark">Payment Links</h4>
-                        <p class="card-text text-muted">Generate shareable CyberSource-hosted payment URLs</p>
-                        <span class="badge bg-primary">Pay-by-link</span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card disabled-card h-100">
-                <div class="card-body text-center">
-                    <h4 class="card-title text-dark">PayPal</h4>
-                    <p class="card-text text-muted">Requires merchant-level alt payment config</p>
-                    <span class="badge bg-secondary">Coming Soon</span>
-                </div>
+<!-- Hero -->
+<div class="bg-white border-bottom py-4 mb-4">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-7">
+                <h1 class="fw-bold mb-2" style="color: var(--cs-primary);">Welcome to CyberShop</h1>
+                <p class="text-muted mb-0 fs-5">A demo store powered by CyberSource payment processing. Add items to your cart and experience a real checkout flow with multiple payment methods.</p>
+            </div>
+            <div class="col-lg-5 text-end d-none d-lg-block">
+                <span class="badge bg-light text-dark border px-3 py-2">
+                    <i class="bi bi-shield-lock me-1"></i> Sandbox Mode &mdash; No real charges
+                </span>
             </div>
         </div>
-
     </div>
 </div>
 
+<!-- Products -->
+<div class="container mb-5">
+    <div class="row g-4" id="productGrid"></div>
+</div>
+
+<!-- Toast for "Added to cart" -->
+<div class="toast-container" id="toastContainer"></div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/js/store.js"></script>
+<script>
+    renderProductGrid();
+</script>
 </body>
 </html>
