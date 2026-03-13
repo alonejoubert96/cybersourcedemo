@@ -4,7 +4,7 @@ description: Authorize, sale, capture, refund, and void credit card transactions
 ---
 
 :::tip[Try it live]
-**[Open Card Payment Demo →](http://localhost:8080/checkout/card)** (requires `./gradlew bootRun`)
+**[Open Card Checkout →](http://localhost:8080/checkout?method=card)** — or use the legacy API test page at [`/demo/card`](http://localhost:8080/demo/card). Requires `./gradlew bootRun`.
 :::
 
 Card payments are the core flow. The `CardPaymentService` supports the full payment lifecycle: **authorize → capture → refund** or **sale** (auth+capture in one call), plus **void** for cancellations.
@@ -134,20 +134,22 @@ Response:                        Response:                    Response:
   transactionId: "abc123"        transactionId: "def456"      transactionId: "ghi789"
 ```
 
-## UI Demo
+## UI Demo — Storefront Checkout
 
-Navigate to [`http://localhost:8080/checkout/card`](http://localhost:8080/checkout/card) to try the full lifecycle interactively. All forms are pre-filled with valid [sandbox test data](/reference/test-data/).
+The primary card flow uses the **CyberShop checkout wizard** at [`/checkout?method=card`](http://localhost:8080/checkout?method=card):
 
-### Walkthrough: Authorize → Capture → Refund
+1. **Add products** to your cart from the product catalog at [`/`](http://localhost:8080)
+2. **Go to cart** (`/cart`) and click **Card Payment**
+3. **Step 1: Contact Details** — Enter email and phone, click Continue
+4. **Step 2: Payment Details** — Card number, expiry, CVV, billing address. All pre-filled with sandbox test data. Click Continue.
+5. **Step 3: Review & Confirm** — Review all sections (each with an Edit link), click **Card Payment** to submit
+6. **Order Confirmation** — Shows transaction ID, order number, and shipping details
 
-1. **Authorize** — Click **Authorize** with the pre-filled Visa test card. The result appears inline with the transaction ID.
-2. **Capture** — The transaction ID auto-fills into the Capture form. Click **Capture** to settle the hold.
-3. **Refund** — The capture's transaction ID auto-fills into the Refund form. Click **Refund** to return the funds.
+The checkout wizard uses the **Sale** operation (authorize + capture in one step).
 
-### Alternative Flows
+### Legacy API Test Page
 
-- **Sale** — A standalone auth+capture in one step. Pre-filled with the same test card.
-- **Void** — Cancels an authorization before settlement. The authorize transaction ID auto-fills here too.
+For testing the full lifecycle (authorize → capture → refund → void), use the legacy demo page at [`/demo/card`](http://localhost:8080/demo/card). This page provides individual forms for each operation with auto-populated transaction IDs between steps.
 
 ## REST API Examples
 
@@ -162,7 +164,7 @@ curl -X POST http://localhost:8080/api/payments/card/authorize \
     "expirationYear": "2031",
     "securityCode": "123",
     "amount": 25.00,
-    "currency": "USD"
+    "currency": "ZAR"
   }'
 ```
 
@@ -176,7 +178,7 @@ curl -X POST http://localhost:8080/api/payments/card/sale \
     "expirationMonth": "12",
     "expirationYear": "2031",
     "amount": 50.00,
-    "currency": "USD"
+    "currency": "ZAR"
   }'
 ```
 
@@ -185,7 +187,7 @@ curl -X POST http://localhost:8080/api/payments/card/sale \
 ```bash
 curl -X POST http://localhost:8080/api/payments/card/{transactionId}/capture \
   -H 'Content-Type: application/json' \
-  -d '{ "amount": 25.00, "currency": "USD" }'
+  -d '{ "amount": 25.00, "currency": "ZAR" }'
 ```
 
 ### Refund (use transactionId from capture)
@@ -193,7 +195,7 @@ curl -X POST http://localhost:8080/api/payments/card/{transactionId}/capture \
 ```bash
 curl -X POST http://localhost:8080/api/payments/card/{transactionId}/refund \
   -H 'Content-Type: application/json' \
-  -d '{ "amount": 25.00, "currency": "USD" }'
+  -d '{ "amount": 25.00, "currency": "ZAR" }'
 ```
 
 ### Void (use transactionId from authorize)
@@ -211,7 +213,7 @@ curl -X POST http://localhost:8080/api/payments/card/{transactionId}/void
 | Expiration Year | `2031` |
 | Security Code | `123` |
 | Amount | Any positive number (e.g. `25.00`) |
-| Currency | `USD` |
+| Currency | `ZAR` |
 
 See [Test Data Reference](/reference/test-data/) for additional test card numbers.
 

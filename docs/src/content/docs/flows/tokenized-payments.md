@@ -4,7 +4,7 @@ description: Store cards for returning shoppers and pay with customer tokens.
 ---
 
 :::tip[Try it live]
-**[Open Tokenized Payments Demo →](http://localhost:8080/checkout/token)** (requires `./gradlew bootRun`)
+**[Open Saved Card Checkout →](http://localhost:8080/checkout?method=token)** — or use the legacy API test page at [`/demo/token`](http://localhost:8080/demo/token). Requires `./gradlew bootRun`.
 :::
 
 Tokenized payments use CyberSource's **Token Management Service (TMS)** to securely store card details and charge them later without resending the full card number. This is a two-phase flow: **store** the card, then **pay** with the token.
@@ -108,14 +108,17 @@ customer.id(customerId);  // That's it — no card number, no expiry
 paymentInfo.customer(customer);
 ```
 
-## UI Demo
+## UI Demo — Storefront Checkout
 
-Navigate to [`http://localhost:8080/checkout/token`](http://localhost:8080/checkout/token) to try the full store-then-pay flow. All fields are pre-filled with valid [sandbox test data](/reference/test-data/).
+The saved card flow uses the **CyberShop checkout wizard** at [`/checkout?method=token`](http://localhost:8080/checkout?method=token):
 
-### Walkthrough
+1. Add products to your cart, go to cart, and click **Saved Card**
+2. **Step 1: Contact Details** — Email and phone
+3. **Step 2: Save Your Card** — Enter card details and click **Save Card Securely**. Once saved, a success message shows the customer ID. Click Continue.
+4. **Step 3: Review & Confirm** — Click **Saved Card** to pay with the token — no card details needed
+5. **Order Confirmation** — Shows transaction details
 
-1. **Store Card** — Click **Store Card** with the pre-filled Visa test card. The result appears inline showing the `customerId` and `paymentInstrumentId`.
-2. **Pay with Token** — The `customerId` auto-fills into the Pay form below. Click **Pay with Token** to charge the stored card — no card details needed, just the token.
+The legacy API test page is available at [`/demo/token`](http://localhost:8080/demo/token).
 
 ## REST API Examples
 
@@ -154,7 +157,7 @@ curl -X POST http://localhost:8080/api/tokens/pay \
   -d '{
     "customerId": "ABC123DEF456",
     "amount": 25.00,
-    "currency": "USD"
+    "currency": "ZAR"
   }'
 ```
 

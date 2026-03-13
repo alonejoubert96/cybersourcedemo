@@ -1,9 +1,9 @@
 ---
-title: CyberSource Payment Demo
-description: A Spring Boot demo showcasing CyberSource payment integration across multiple payment methods.
+title: CyberShop Payment Demo
+description: A Spring Boot e-commerce demo showcasing CyberSource payment integration across multiple payment methods.
 template: splash
 hero:
-  tagline: Explore card payments, digital wallets, EFT, tokenization, invoices, and payment links — all powered by the CyberSource REST SDK.
+  tagline: A fully interactive storefront powered by CyberSource — browse products, add to cart, and check out with cards, wallets, bank transfers, tokenized payments, invoices, and payment links.
   actions:
     - text: Get Started
       link: /getting-started/introduction/
@@ -19,7 +19,14 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 ## Live Demo
 
-Once the app is running (`./gradlew bootRun`), open **[http://localhost:8080](http://localhost:8080)** to access the interactive demo UI. All forms are pre-filled with valid sandbox test data — just click and submit.
+Once the app is running (`./gradlew bootRun`), open **[http://localhost:8080](http://localhost:8080)** to access the CyberShop storefront. Browse products, add them to your cart, and check out using any of the supported payment methods — all pre-filled with valid sandbox test data.
+
+### Checkout Flow
+
+1. **Product Catalog** (`/`) — Browse 6 tech products and add to cart
+2. **Cart** (`/cart`) — Review items, choose delivery options, select a payment method
+3. **Checkout Wizard** (`/checkout?method=...`) — Multi-step: Contact Details → Payment Details → Review & Confirm
+4. **Order Confirmation** — Transaction details, order number, shipping info
 
 ## Payment Methods
 
@@ -27,31 +34,31 @@ Once the app is running (`./gradlew bootRun`), open **[http://localhost:8080](ht
 	<Card title="Card Payments" icon="seti:html">
 		Authorize, sale, capture, refund, and void credit card transactions.
 
-		[Docs →](/flows/card-payments/) · [Demo →](http://localhost:8080/checkout/card)
+		[Docs →](/flows/card-payments/) · [Demo →](http://localhost:8080/checkout?method=card)
 	</Card>
 	<Card title="Digital Wallets" icon="seti:favicon">
 		Google Pay, Apple Pay, and Samsung Pay via a single unified service.
 
-		[Docs →](/flows/digital-wallets/) · [Demo →](http://localhost:8080/checkout/wallet)
+		[Docs →](/flows/digital-wallets/) · [Demo →](http://localhost:8080/checkout?method=wallet)
 	</Card>
 	<Card title="EFT / eCheck" icon="seti:bicep">
 		ACH bank account payments using routing and account numbers.
 
-		[Docs →](/flows/eft-echeck/) · [Demo →](http://localhost:8080/checkout/eft)
+		[Docs →](/flows/eft-echeck/) · [Demo →](http://localhost:8080/checkout?method=eft)
 	</Card>
 	<Card title="Tokenized Payments" icon="seti:lock">
 		Store cards for returning shoppers and pay with customer tokens.
 
-		[Docs →](/flows/tokenized-payments/) · [Demo →](http://localhost:8080/checkout/token)
+		[Docs →](/flows/tokenized-payments/) · [Demo →](http://localhost:8080/checkout?method=token)
 	</Card>
 	<Card title="Invoices" icon="seti:pdf">
 		Create and send invoices to customers via email.
 
-		[Docs →](/flows/invoices/) · [Demo →](http://localhost:8080/checkout/invoice)
+		[Docs →](/flows/invoices/) · [Demo →](http://localhost:8080/checkout?method=invoice)
 	</Card>
 	<Card title="Payment Links" icon="seti:url">
 		Generate shareable payment URLs for easy checkout.
 
-		[Docs →](/flows/payment-links/) · [Demo →](http://localhost:8080/checkout/payment-link)
+		[Docs →](/flows/payment-links/) · [Demo →](http://localhost:8080/checkout?method=paymentLink)
 	</Card>
 </CardGrid>

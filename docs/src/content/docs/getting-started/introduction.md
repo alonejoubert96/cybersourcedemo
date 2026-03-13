@@ -1,9 +1,9 @@
 ---
 title: Introduction
-description: Overview of the CyberSource Payment Demo application.
+description: Overview of the CyberShop Payment Demo application.
 ---
 
-This is a **Spring Boot** demo application that showcases CyberSource payment integration across multiple payment methods. It provides both a REST API backend and a Thymeleaf-based UI so you can see each flow end-to-end.
+This is a **Spring Boot** e-commerce demo application that showcases CyberSource payment integration across multiple payment methods. It provides a full storefront experience (product catalog, shopping cart, multi-step checkout wizard) backed by REST APIs that call the CyberSource sandbox.
 
 ## What's Included
 
@@ -22,7 +22,8 @@ This is a **Spring Boot** demo application that showcases CyberSource payment in
 - **Java 17** + **Spring Boot 3.4.3** + **Gradle (Kotlin DSL)**
 - **Lombok** for boilerplate reduction
 - **CyberSource REST Client Java SDK 0.0.86**
-- **Thymeleaf** + **Bootstrap 5 (CDN)** for the demo UI
+- **Thymeleaf** + **Bootstrap 5** + **Bootstrap Icons** for the storefront UI
+- **Currency:** ZAR (South African Rand) — displayed as `R`
 
 ## Quick Start
 
@@ -37,9 +38,19 @@ cd "Cybersource Demo"
 # Open http://localhost:8080 in your browser
 ```
 
-The landing page shows a grid of available payment methods. Click any card to open its checkout form — all forms come pre-populated with [valid test data](/reference/test-data/).
+The landing page shows the **CyberShop** product catalog with 6 tech products. Add items to your cart, then proceed to checkout where you choose a payment method and walk through a multi-step wizard (Contact → Payment → Review → Confirm). All forms come pre-populated with [valid test data](/reference/test-data/).
 
-All forms submit via AJAX and display results inline. Multi-step flows (like Authorize → Capture → Refund) auto-populate transaction IDs between steps so you can walk through the full lifecycle without copy-pasting.
+## Checkout Flow
+
+```
+Product Catalog (/)  →  Cart (/cart)  →  Checkout Wizard (/checkout?method=card)
+                                          Step 1: Contact Details (email, phone)
+                                          Step 2: Payment Details + Billing Address
+                                          Step 3: Review & Confirm
+                                          → Order Confirmation
+```
+
+Each completed step collapses into a summary with an **Edit** link, matching real-world checkout patterns.
 
 ## Project Layout
 
@@ -56,7 +67,30 @@ src/main/java/com/example/cybersourcedemo/
 │   ├── api/                                 # REST endpoints (JSON)
 │   └── ui/                                  # Thymeleaf page routing
 └── exception/                               # Error handling
+
+src/main/resources/
+├── application.yml                          # CyberSource sandbox credentials
+├── templates/
+│   ├── fragments/layout.html                # Shared navbar, CSS (CyberShop branding)
+│   ├── index.html                           # Product catalog
+│   ├── cart.html                            # Shopping cart + payment method selection
+│   ├── checkout.html                        # Multi-step checkout wizard
+│   ├── result.html                          # Legacy result page
+│   └── checkout/                            # Legacy per-method demo pages
+└── static/js/
+    ├── store.js                             # Cart, wizard, and checkout logic
+    └── demo.js                              # Legacy demo page utilities
 ```
+
+## Routes
+
+| Route | Description |
+|---|---|
+| `/` | Product catalog (storefront) |
+| `/cart` | Shopping cart with delivery options and payment method buttons |
+| `/checkout?method=card` | Checkout wizard (card, wallet, eft, token, invoice, paymentLink) |
+| `/demo/card`, `/demo/wallet`, etc. | Legacy per-method API test pages |
+| `/api/*` | REST API endpoints |
 
 ## Next Steps
 

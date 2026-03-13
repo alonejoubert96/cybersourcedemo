@@ -4,7 +4,7 @@ description: ACH bank account payments using routing and account numbers.
 ---
 
 :::tip[Try it live]
-**[Open EFT / eCheck Demo →](http://localhost:8080/checkout/eft)** (requires `./gradlew bootRun`)
+**[Open EFT Checkout →](http://localhost:8080/checkout?method=eft)** — or use the legacy API test page at [`/demo/eft`](http://localhost:8080/demo/eft). Requires `./gradlew bootRun`.
 :::
 
 The `EftPaymentService` processes **eCheck / ACH** payments by debiting a bank account directly. It uses the same `PaymentsApi` as card payments but sends bank account information instead of card details, with the payment type set to `CHECK`.
@@ -62,13 +62,21 @@ paymentType.name("CHECK");
 paymentInfo.paymentType(paymentType);
 ```
 
-## UI Demo
+## UI Demo — Storefront Checkout
 
-Navigate to [`http://localhost:8080/checkout/eft`](http://localhost:8080/checkout/eft) to try EFT payments interactively. All fields are pre-filled with valid [sandbox test data](/reference/test-data/).
+The EFT flow uses the **CyberShop checkout wizard** at [`/checkout?method=eft`](http://localhost:8080/checkout?method=eft):
 
-1. The routing number (`121042882`), account number (`4100`), and billing details are pre-populated
-2. Select account type (Checking or Savings)
-3. Click **Pay with eCheck** — the result appears inline with status and transaction ID
+1. Add products to your cart, go to cart, and click **Bank Transfer (EFT)**
+2. **Step 1: Contact Details** — Email and phone
+3. **Step 2: Bank Account Details** — Routing number, account number, account type, billing address. All pre-filled.
+4. **Step 3: Review & Confirm** — Click **Bank Transfer** to submit
+5. **Order Confirmation** — Shows transaction details
+
+:::note
+The CyberSource sandbox requires **USD** for ACH/eCheck transactions. The storefront displays prices in ZAR but sends USD to the API for EFT payments.
+:::
+
+The legacy API test page is available at [`/demo/eft`](http://localhost:8080/demo/eft).
 
 ## REST API Example
 

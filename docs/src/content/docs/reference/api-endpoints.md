@@ -50,7 +50,7 @@ All REST endpoints return a `PaymentResponse` JSON object:
 | Method | Endpoint | Description | Request Body |
 |---|---|---|---|
 | POST | `/api/tokens/customers` | Store card for returning shoppers | [TokenRequest](#tokenrequest) |
-| POST | `/api/tokens/pay` | Pay with stored customer token | `{ customerId, amount, currency }` |
+| POST | `/api/tokens/pay` | Pay with stored customer token | `{ customerId, amount, currency: "ZAR" }` |
 
 [Tokenized Payments flow →](/flows/tokenized-payments/)
 
@@ -84,11 +84,11 @@ All REST endpoints return a `PaymentResponse` JSON object:
   "expirationMonth": "12",
   "expirationYear": "2031",
   "securityCode": "123",
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "test@example.com",
+  "firstName": "Viktor",
+  "lastName": "Vaughn",
+  "email": "customer@example.com",
   "amount": 25.00,
-  "currency": "USD"
+  "currency": "ZAR"
 }
 ```
 
@@ -101,7 +101,7 @@ All REST endpoints return a `PaymentResponse` JSON object:
   "expirationMonth": "12",
   "expirationYear": "2026",
   "amount": 25.00,
-  "currency": "USD"
+  "currency": "ZAR"
 }
 ```
 
@@ -112,13 +112,17 @@ All REST endpoints return a `PaymentResponse` JSON object:
   "routingNumber": "121042882",
   "accountNumber": "4100",
   "accountType": "C",
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "test@example.com",
+  "firstName": "Viktor",
+  "lastName": "Vaughn",
+  "email": "customer@example.com",
   "amount": 25.00,
   "currency": "USD"
 }
 ```
+
+:::caution
+ACH/eCheck is a US payment system. The CyberSource sandbox **requires USD** for EFT transactions. The CyberShop storefront displays ZAR prices but sends USD to the API for EFT payments.
+:::
 
 ### TokenRequest
 
@@ -127,9 +131,7 @@ All REST endpoints return a `PaymentResponse` JSON object:
   "cardNumber": "4111111111111111",
   "expirationMonth": "12",
   "expirationYear": "2031",
-  "firstName": "John",
-  "lastName": "Doe",
-  "email": "test@example.com"
+  "email": "customer@example.com"
 }
 ```
 
@@ -137,10 +139,10 @@ All REST endpoints return a `PaymentResponse` JSON object:
 
 ```json
 {
-  "customerEmail": "test@example.com",
-  "description": "Demo invoice item",
+  "customerEmail": "customer@example.com",
+  "description": "CyberShop order",
   "amount": 100.00,
-  "currency": "USD",
+  "currency": "ZAR",
   "dueDate": "2026-04-01"
 }
 ```
@@ -149,8 +151,8 @@ All REST endpoints return a `PaymentResponse` JSON object:
 
 ```json
 {
-  "description": "Demo payment link",
+  "description": "CyberShop order",
   "amount": 50.00,
-  "currency": "USD"
+  "currency": "ZAR"
 }
 ```
