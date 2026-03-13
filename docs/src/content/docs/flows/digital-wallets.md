@@ -4,7 +4,7 @@ description: Google Pay, Apple Pay, and Samsung Pay payments via a unified servi
 ---
 
 :::tip[Try it live]
-**[Open Digital Wallet Demo →](http://localhost:8080/checkout/wallet)** (requires `./gradlew bootRun`)
+**[Open Wallet Checkout →](http://localhost:8080/checkout?method=wallet)** — or use the legacy API test page at [`/demo/wallet`](http://localhost:8080/demo/wallet). Requires `./gradlew bootRun`.
 :::
 
 The `WalletPaymentService` handles all three digital wallets — **Google Pay**, **Apple Pay**, and **Samsung Pay** — through the same `PaymentsApi`. The only difference between them is the `paymentSolution` code sent to CyberSource.
@@ -86,17 +86,21 @@ paymentInfo.tokenizedCard(tokenizedCard);
 
 The `processingInformation.paymentSolution` code tells CyberSource which wallet network to route through.
 
-## UI Demo
+## UI Demo — Storefront Checkout
 
-Navigate to [`http://localhost:8080/checkout/wallet`](http://localhost:8080/checkout/wallet) to try wallet payments interactively. All fields are pre-filled with valid [sandbox test data](/reference/test-data/).
+The wallet flow uses the **CyberShop checkout wizard** at [`/checkout?method=wallet`](http://localhost:8080/checkout?method=wallet):
 
-1. Select the wallet type (Google Pay, Apple Pay, or Samsung Pay) from the dropdown
-2. The token data, cryptogram, and amount are pre-populated
-3. Click **Pay with Wallet** — the result appears inline with status and transaction ID
+1. Add products to your cart, go to cart, and click **Digital Wallet**
+2. **Step 1: Contact Details** — Email and phone
+3. **Step 2: Wallet Details** — Select provider (Google Pay, Apple Pay, Samsung Pay), token data, cryptogram. All pre-filled.
+4. **Step 3: Review & Confirm** — Click **Digital Wallet** to submit
+5. **Order Confirmation** — Shows transaction details
 
 :::tip
 The only difference between the three wallets in the API call is the `paymentSolution` code. Try switching wallet types to see this in action.
 :::
+
+The legacy API test page is available at [`/demo/wallet`](http://localhost:8080/demo/wallet).
 
 ## REST API Examples
 
@@ -111,7 +115,7 @@ curl -X POST http://localhost:8080/api/payments/wallet/GOOGLE_PAY \
     "expirationYear": "2026",
     "cryptogram": "ABCDEFabcdef1234567890ABCDEF=",
     "amount": 25.00,
-    "currency": "USD"
+    "currency": "ZAR"
   }'
 ```
 
@@ -126,7 +130,7 @@ curl -X POST http://localhost:8080/api/payments/wallet/APPLE_PAY \
     "expirationYear": "2026",
     "cryptogram": "ABCDEFabcdef1234567890ABCDEF=",
     "amount": 25.00,
-    "currency": "USD"
+    "currency": "ZAR"
   }'
 ```
 
@@ -141,7 +145,7 @@ curl -X POST http://localhost:8080/api/payments/wallet/SAMSUNG_PAY \
     "expirationYear": "2026",
     "cryptogram": "ABCDEFabcdef1234567890ABCDEF=",
     "amount": 25.00,
-    "currency": "USD"
+    "currency": "ZAR"
   }'
 ```
 
@@ -154,7 +158,7 @@ curl -X POST http://localhost:8080/api/payments/wallet/SAMSUNG_PAY \
 | Expiration Year | `2026` | |
 | Cryptogram | `ABCDEFabcdef1234567890ABCDEF=` | Base64 network cryptogram |
 | Amount | Any positive number | e.g. `25.00` |
-| Currency | `USD` | |
+| Currency | `ZAR` | |
 
 :::note
 In production, the `tokenData` and `cryptogram` come from the wallet SDK (Google Pay API, Apple Pay JS, Samsung Pay SDK). For this sandbox demo, test values are used directly.

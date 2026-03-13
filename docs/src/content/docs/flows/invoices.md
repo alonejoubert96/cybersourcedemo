@@ -4,7 +4,7 @@ description: Create and send invoices to customers via email.
 ---
 
 :::tip[Try it live]
-**[Open Invoice Demo →](http://localhost:8080/checkout/invoice)** (requires `./gradlew bootRun`)
+**[Open Invoice Checkout →](http://localhost:8080/checkout?method=invoice)** — or use the legacy API test page at [`/demo/invoice`](http://localhost:8080/demo/invoice). Requires `./gradlew bootRun`.
 :::
 
 The `InvoiceService` manages CyberSource invoices — creating them with customer and line-item details, and sending them to the customer's email. CyberSource handles the hosted payment page that the customer uses to pay.
@@ -89,15 +89,19 @@ Response:                           Response:
   details.invoiceId: "inv-abc123"
 ```
 
-## UI Demo
+## UI Demo — Storefront Checkout
 
-Navigate to [`http://localhost:8080/checkout/invoice`](http://localhost:8080/checkout/invoice) to try the create-then-send flow. All fields are pre-filled with valid [sandbox test data](/reference/test-data/).
+The invoice flow uses the **CyberShop checkout wizard** at [`/checkout?method=invoice`](http://localhost:8080/checkout?method=invoice):
 
-### Walkthrough
+1. Add products to your cart, go to cart, and click **Pay by Invoice**
+2. **Step 1: Contact Details** — Email and phone
+3. **Step 2: Invoice Details** — Description and due date
+4. **Step 3: Review & Confirm** — Click **Pay by Invoice** to create and send the invoice
+5. **Order Confirmation** — The invoice is created and automatically emailed to the customer
 
-1. **Create Invoice** — Click **Create Invoice** with the pre-filled email, description, and amount. The result appears inline showing the invoice ID.
-2. **Send Invoice** — The invoice ID auto-fills into the Send form below. Click **Send Invoice** to email it to the customer via CyberSource's hosted payment page.
-3. **Get Invoice** (optional) — The invoice ID also auto-fills into the Get form. Use this to retrieve and inspect invoice details.
+The checkout wizard automatically creates the invoice and sends it in one step.
+
+The legacy API test page at [`/demo/invoice`](http://localhost:8080/demo/invoice) provides separate forms for create, send, and get operations.
 
 ## REST API Examples
 
@@ -110,7 +114,7 @@ curl -X POST http://localhost:8080/api/invoices \
     "customerEmail": "test@example.com",
     "description": "Demo invoice item",
     "amount": 100.00,
-    "currency": "USD",
+    "currency": "ZAR",
     "dueDate": "2026-04-01"
   }'
 ```
@@ -134,7 +138,7 @@ curl http://localhost:8080/api/invoices/{invoiceId}
 | Customer Email | `test@example.com` | Receives the invoice email |
 | Description | `Demo invoice item` | Shown as line item |
 | Amount | `100.00` | Total invoice amount |
-| Currency | `USD` | |
+| Currency | `ZAR` | |
 | Due Date | `2026-04-01` | ISO format (yyyy-MM-dd) |
 
 ## SDK Classes Used
