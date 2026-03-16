@@ -6,73 +6,40 @@ description: How the application components and CyberSource SDK fit together.
 ## High-Level Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Client Layer                            │
-│  ┌──────────────────┐           ┌───────────────────────┐       │
-│  │  Thymeleaf UI    │           │  REST API Consumers   │       │
-│  │  (Bootstrap 5)   │           │  (curl, Postman, etc) │       │
-│  └────────┬─────────┘           └───────────┬───────────┘       │
-│           │ HTML forms + fetch()             │ JSON              │
-└───────────┼──────────────────────────────────┼──────────────────┘
-            ▼                                  ▼
-┌─────────────────────────────────────────────────────────────────┐
-│                      Spring Boot Application                    │
-│                                                                 │
-│  ┌──────────────────┐    ┌──────────────────────────────────┐   │
-│  │ CheckoutUi       │    │ REST Controllers (api/)           │   │
-│  │ Controller       │    │  CardPaymentController            │   │
-│  │ (Thymeleaf       │    │  WalletPaymentController          │   │
-│  │  routing)        │    │  EftPaymentController             │   │
-│  └──────────────────┘    │  TokenController                  │   │
-│                          │  InvoiceController                │   │
-│                          │  PaymentLinkController            │   │
-│                          └──────────┬───────────────────────┘   │
-│                                     │                           │
-│                                     ▼                           │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │                    Service Layer                          │   │
-│  │  CardPaymentService    WalletPaymentService               │   │
-│  │  EftPaymentService     TokenService                       │   │
-│  │  TokenizedPaymentService  InvoiceService                  │   │
-│  │  PaymentLinkService    PayPalPaymentService (stub)        │   │
-│  └──────────────────────────┬───────────────────────────────┘   │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │              SDK Integration Layer                        │   │
-│  │  ┌──────────────────┐    ┌──────────────────────────┐    │   │
-│  │  │ ApiClientFactory │───▶│ CybersourceConfig        │    │   │
-│  │  │ (per-request)    │    │ (@ConfigurationProperties)│   │   │
-│  │  └────────┬─────────┘    └──────────────────────────┘    │   │
-│  │           │                                               │   │
-│  │           ▼                                               │   │
-│  │  ┌──────────────────────────────────────────────────┐    │   │
-│  │  │         CyberSource REST Client SDK              │    │   │
-│  │  │  ApiClient → MerchantConfig → HTTP Signature     │    │   │
-│  │  │  PaymentsApi, CaptureApi, RefundApi, VoidApi     │    │   │
-│  │  │  CustomerApi, InstrumentIdentifierApi            │    │   │
-│  │  │  InvoicesApi, PaymentLinksApi                     │    │   │
-│  │  └──────────────────────────────────────────────────┘    │   │
-│  └──────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ HTTPS (HTTP Signature Auth)
-                    ┌─────────────────────┐
-                    │  CyberSource API    │
-                    │  (apitest.cyber     │
-                    │   source.com)       │
-                    └─────────────────────┘
+Browser / curl / Postman
+        |
+        v
+Spring Boot (port 8080)
+  |
+  +-- controller/ui/  (Thymeleaf page routes)
+  +-- controller/api/ (REST JSON endpoints)
+        |
+        v
+  Service layer
+    CardPaymentService, WalletPaymentService, EftPaymentService,
+    TokenService, TokenizedPaymentService, InvoiceService,
+    PaymentLinkService
+        |
+        v
+  ApiClientFactory  -->  CybersourceConfig (application.yml)
+        |
+        v
+  CyberSource REST Client SDK
+    ApiClient + MerchantConfig + HTTP Signature auth
+        |
+        v
+  apitest.cybersource.com (sandbox)
 ```
 
 ## Design Principles
 
-### 1. Separate Services — No Strategy Pattern
+### 1. One service per payment method
 
-Each payment method has a dedicated service class. The request shapes are fundamentally different across payment types (cards vs. bank accounts vs. wallet tokens vs. invoices), so a shared interface would add indirection without reducing code. For a demo, explicit code is clearer than abstraction.
+Each method gets its own service. The request shapes differ enough (cards vs bank accounts vs wallet tokens vs invoices) that a shared interface would just add indirection.
 
-### 2. ApiClient Created Per-Request
+### 2. Fresh ApiClient per request
 
-The CyberSource SDK's `ApiClient` is **mutable and not thread-safe** — it stores response codes and status on instance fields after each call. `ApiClientFactory` creates a fresh `ApiClient` for every API call, which matches the pattern used in CyberSource's own sample code.
+`ApiClient` is mutable — it stores the response code on the instance after each call, so it's not safe to reuse across requests. `ApiClientFactory` creates a new one every time.
 
 ```java
 // ApiClientFactory.java
@@ -84,9 +51,9 @@ public ApiClient create() throws Exception {
 }
 ```
 
-### 3. Universal PaymentResponse
+### 3. Shared PaymentResponse
 
-All operations return the same `PaymentResponse` shape regardless of payment method. The `details` map handles method-specific extras (reconciliation IDs, customer IDs, etc.).
+Every endpoint returns the same `PaymentResponse` DTO. Method-specific fields go in the `details` map.
 
 ```java
 @Data @Builder
@@ -101,83 +68,26 @@ public class PaymentResponse {
 
 ### 4. Flat DTOs
 
-Each payment method has its own request DTO with no inheritance hierarchy. This keeps each flow self-documenting — you can look at `EftPaymentRequest` and immediately know what fields EFT needs without tracing through a class hierarchy.
+Each method has its own request DTO — no inheritance. You can look at `EftPaymentRequest` and see exactly what fields EFT needs.
 
 ## Request Lifecycle
 
-Every API request follows this lifecycle:
-
 ```
-1. HTTP Request arrives at REST Controller
-         │
-2. Controller delegates to Service
-         │
-3. Service calls ApiClientFactory.create()
-   └─▶ Creates fresh ApiClient
-   └─▶ Loads MerchantConfig from CybersourceConfig (application.yml)
-         │
-4. Service builds SDK request model
-   └─▶ Creates request object (e.g. CreatePaymentRequest)
-   └─▶ Sets sub-models (card info, amount, billing address, etc.)
-         │
-5. Service calls SDK API method
-   └─▶ e.g. PaymentsApi.createPayment(request)
-   └─▶ SDK handles HTTP Signature auth, serialization, HTTP call
-         │
-6. Service reads SDK response
-   └─▶ Maps to PaymentResponse DTO
-   └─▶ Returns to controller
-         │
-7. Controller returns ResponseEntity<PaymentResponse>
+HTTP request → Controller → Service
+  → ApiClientFactory.create() (fresh ApiClient + MerchantConfig)
+  → build SDK request model (e.g. CreatePaymentRequest)
+  → call SDK API method (e.g. PaymentsApi.createPayment)
+  → map SDK response → PaymentResponse
+  → return ResponseEntity<PaymentResponse>
 ```
 
-## Authentication Flow
+## Authentication
 
-The SDK handles authentication automatically using **HTTP Signature**:
-
-```
-CybersourceConfig (application.yml)
-    │
-    ▼
-Properties object
-    ├── merchantID: "testrest"
-    ├── runEnvironment: "apitest.cybersource.com"
-    ├── authenticationType: "http_signature"
-    ├── merchantKeyId: UUID (identifies the key)
-    └── merchantsecretKey: Base64 (shared secret)
-    │
-    ▼
-MerchantConfig
-    │
-    ▼
-ApiClient.merchantConfig
-    │
-    ▼
-SDK generates HTTP Signature header for each request
-    │
-    ▼
-CyberSource API validates signature and processes request
-```
+The SDK signs each request automatically using HTTP Signature auth. Credentials come from `application.yml` → `CybersourceConfig` → `MerchantConfig` → `ApiClient`. The key fields are `merchantKeyId` (UUID) and `merchantsecretKey` (base64 shared secret).
 
 ## Error Handling
 
-```
-SDK throws ApiException
-    │
-    ▼
-Service catches and wraps in PaymentException
-    ├── statusCode (HTTP status from CyberSource)
-    └── responseBody (raw error JSON)
-    │
-    ▼
-GlobalExceptionHandler (@ControllerAdvice)
-    │
-    ▼
-PaymentResponse with status="ERROR"
-    │
-    ▼
-HTTP response with appropriate status code
-```
+SDK `ApiException` → service wraps it in `PaymentException` (carries `statusCode` + `responseBody`) → `GlobalExceptionHandler` (`@ControllerAdvice`) returns a `PaymentResponse` with `status="ERROR"` and the appropriate HTTP status.
 
 ## SDK APIs Used
 

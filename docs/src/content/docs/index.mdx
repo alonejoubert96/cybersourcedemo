@@ -1,9 +1,9 @@
 ---
 title: CyberShop Payment Demo
-description: A Spring Boot e-commerce demo showcasing CyberSource payment integration across multiple payment methods.
+description: Spring Boot demo for CyberSource payment integration.
 template: splash
 hero:
-  tagline: A fully interactive storefront powered by CyberSource — browse products, add to cart, and check out with cards, wallets, bank transfers, tokenized payments, invoices, and payment links.
+  tagline: A Spring Boot storefront that integrates with the CyberSource sandbox — cards, wallets, bank transfers, tokenized payments, invoices and payment links.
   actions:
     - text: Get Started
       link: /getting-started/introduction/
@@ -19,14 +19,14 @@ import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 ## Live Demo
 
-Once the app is running (`./gradlew bootRun`), open **[http://localhost:8080](http://localhost:8080)** to access the CyberShop storefront. Browse products, add them to your cart, and check out using any of the supported payment methods — all pre-filled with valid sandbox test data.
+Run `./gradlew bootRun` and open **[http://localhost:8080](http://localhost:8080)**. The storefront has test products you can add to cart and check out with — forms are pre-filled with sandbox test data so you can submit straight away.
 
 ### Checkout Flow
 
-1. **Product Catalog** (`/`) — Browse 6 tech products and add to cart
-2. **Cart** (`/cart`) — Review items, choose delivery options, select a payment method
-3. **Checkout Wizard** (`/checkout?method=...`) — Multi-step: Contact Details → Payment Details → Review & Confirm
-4. **Order Confirmation** — Transaction details, order number, shipping info
+1. **Product Catalog** (`/`) — add items to cart
+2. **Cart** (`/cart`) — review items, pick a payment method
+3. **Checkout** (`/checkout?method=...`) — contact → payment → review & confirm
+4. **Confirmation** — transaction ID, order number, status
 
 ## Payment Methods
 
@@ -37,7 +37,7 @@ Once the app is running (`./gradlew bootRun`), open **[http://localhost:8080](ht
 		[Docs →](/flows/card-payments/) · [Demo →](http://localhost:8080/checkout?method=card)
 	</Card>
 	<Card title="Digital Wallets" icon="seti:favicon">
-		Google Pay, Apple Pay, and Samsung Pay via a single unified service.
+		Google Pay, Apple Pay, and Samsung Pay through one service.
 
 		[Docs →](/flows/digital-wallets/) · [Demo →](http://localhost:8080/checkout?method=wallet)
 	</Card>

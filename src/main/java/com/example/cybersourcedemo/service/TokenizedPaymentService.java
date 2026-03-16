@@ -26,24 +26,20 @@ public class TokenizedPaymentService {
 
             CreatePaymentRequest paymentRequest = new CreatePaymentRequest();
 
-            // Client reference
             Ptsv2paymentsClientReferenceInformation clientRef = new Ptsv2paymentsClientReferenceInformation();
             clientRef.code("token-" + UUID.randomUUID().toString().substring(0, 8));
             paymentRequest.clientReferenceInformation(clientRef);
 
-            // Processing info — capture immediately
             Ptsv2paymentsProcessingInformation processingInfo = new Ptsv2paymentsProcessingInformation();
             processingInfo.capture(true);
             paymentRequest.processingInformation(processingInfo);
 
-            // Payment info — customer token (no card details needed)
             Ptsv2paymentsPaymentInformation paymentInfo = new Ptsv2paymentsPaymentInformation();
             Ptsv2paymentsPaymentInformationCustomer customer = new Ptsv2paymentsPaymentInformationCustomer();
             customer.id(customerId);
             paymentInfo.customer(customer);
             paymentRequest.paymentInformation(paymentInfo);
 
-            // Order/amount
             Ptsv2paymentsOrderInformation orderInfo = new Ptsv2paymentsOrderInformation();
             Ptsv2paymentsOrderInformationAmountDetails amountDetails = new Ptsv2paymentsOrderInformationAmountDetails();
             amountDetails.totalAmount(String.valueOf(amount));

@@ -1,21 +1,15 @@
-/**
- * CyberShop — Store, Cart & Checkout Wizard
- */
-
-// ══════════════════════════════════════════
-// SECTION 1: Products & Cart
-// ══════════════════════════════════════════
+// store.js — cart, products and checkout wizard
 
 var PRODUCTS = [
-    { id: 1, name: 'Wireless Headphones', price: 79.99, icon: 'bi-headphones', color: '#6f42c1', desc: 'Premium noise-cancelling over-ear headphones with 30hr battery' },
-    { id: 2, name: 'Smart Watch',         price: 199.99, icon: 'bi-smartwatch',  color: '#0d6efd', desc: 'Fitness tracking, heart rate monitor, GPS and notifications' },
-    { id: 3, name: 'Laptop Stand',        price: 49.99,  icon: 'bi-laptop',      color: '#198754', desc: 'Ergonomic aluminum adjustable stand for any laptop' },
-    { id: 4, name: 'USB-C Hub',           price: 39.99,  icon: 'bi-usb-drive',   color: '#dc3545', desc: '7-in-1 multiport adapter: HDMI, USB 3.0, SD, ethernet' },
-    { id: 5, name: 'Mechanical Keyboard', price: 129.99, icon: 'bi-keyboard',    color: '#fd7e14', desc: 'RGB backlit hot-swappable switches, full-size layout' },
-    { id: 6, name: 'Portable Charger',    price: 29.99,  icon: 'bi-battery-charging', color: '#20c997', desc: '20,000mAh fast-charging power bank with dual USB-C' }
+    { id: 1, name: 'Sony WH-1000XM5',    price: 6999.00, icon: 'bi-headphones', color: '#6f42c1', desc: 'Wireless noise-cancelling headphones, 30hr battery' },
+    { id: 2, name: 'Samsung Galaxy Watch 6', price: 5499.00, icon: 'bi-smartwatch', color: '#0d6efd', desc: '44mm, BIA sensor, sapphire crystal glass' },
+    { id: 3, name: 'Rain Design mStand',  price: 1299.00, icon: 'bi-laptop', color: '#198754', desc: 'Aluminium laptop stand, cable management' },
+    { id: 4, name: 'Anker 7-in-1 Hub',    price: 899.00,  icon: 'bi-usb-drive', color: '#dc3545', desc: 'USB-C hub — HDMI 4K, 3x USB-A, SD, 100W PD' },
+    { id: 5, name: 'Keychron K8 Pro',     price: 2799.00, icon: 'bi-keyboard', color: '#fd7e14', desc: 'TKL mechanical, hot-swap Gateron switches, RGB' },
+    { id: 6, name: 'Anker 737 Power Bank', price: 2199.00, icon: 'bi-battery-charging', color: '#20c997', desc: '24K mAh, 140W USB-C, smart display' }
 ];
 
-var TAX_RATE = 0.08;
+var TAX_RATE = 0.15; // SA VAT
 
 function getCart() {
     try { return JSON.parse(localStorage.getItem('cybershop_cart') || '[]'); }
@@ -59,9 +53,7 @@ function updateCartBadge() {
     badge.style.display = count > 0 ? 'flex' : 'none';
 }
 
-// ══════════════════════════════════════════
-// SECTION 2: Utilities
-// ══════════════════════════════════════════
+// --- helpers ---
 
 function esc(str) { if (!str) return ''; var d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
@@ -106,9 +98,7 @@ function futureDate(days) {
     return d.toLocaleDateString('en-ZA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 }
 
-// ══════════════════════════════════════════
-// SECTION 3: Product Grid (index.html)
-// ══════════════════════════════════════════
+// --- product grid (index page) ---
 
 function renderProductGrid() {
     var grid = document.getElementById('productGrid');
@@ -133,9 +123,7 @@ function renderProductGrid() {
     updateCartBadge();
 }
 
-// ══════════════════════════════════════════
-// SECTION 4: Cart Page (cart.html)
-// ══════════════════════════════════════════
+// --- cart page ---
 
 function renderCartPage() {
     var cart = getCart();
@@ -175,9 +163,7 @@ function goToCheckout(method) {
     window.location.href = '/checkout?method=' + method;
 }
 
-// ══════════════════════════════════════════
-// SECTION 5: Checkout Wizard (checkout.html)
-// ══════════════════════════════════════════
+// --- checkout wizard ---
 
 var W = {
     method: 'card',
@@ -244,7 +230,7 @@ function editStep(step) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── Step 1: Contact Details ──
+// step 1: contact
 
 function renderContactForm() {
     return '<div class="wiz-card">'
@@ -285,7 +271,7 @@ function continueContact() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── Step 2: Payment Details ──
+// step 2: payment
 
 function renderPaymentForm() {
     var html = '';
@@ -400,7 +386,7 @@ function renderTokenForm() {
     }
     return '<div class="wiz-card">'
         + '<div class="wiz-label">SAVE YOUR CARD</div>'
-        + '<p class="text-muted" style="font-size:.9rem;">Securely save your card for this and future payments.</p>'
+        + '<p class="text-muted" style="font-size:.9rem;">Save your card details to skip this step next time.</p>'
         + '<div class="mb-3"><label class="wiz-field-label">Card number</label>'
         + '<input type="text" id="payTokenCard" class="form-control wiz-input" value="' + esc(pay.cardNumber || '4111111111111111') + '"></div>'
         + '<div class="row g-3 mb-3">'
@@ -495,7 +481,6 @@ function renderPaymentSummary() {
         + '<a class="wiz-edit" onclick="editStep(2)">Edit</a></div>'
         + '<div class="mt-2">' + summary + '</div></div>';
 
-    // Show shipping summary for methods with billing address
     if (W.method === 'card' || W.method === 'eft') {
         var b = W.billing;
         html += '<div class="wiz-card wiz-summary">'
@@ -512,7 +497,7 @@ function renderPaymentSummary() {
     return html;
 }
 
-// ── Step 2: Save data and continue ──
+// save step 2 data
 
 function continuePayment() {
     if (W.method === 'card') {
@@ -568,7 +553,6 @@ function saveBillingFromForm() {
     W.billing.state = document.getElementById('billingState').value;
     W.billing.zip = document.getElementById('billingZip').value;
     W.shippingSame = document.getElementById('shippingSame').checked;
-    // Sync first/last from payment form
     if (W.method === 'card') {
         W.billing.firstName = W.payment.firstName;
         W.billing.lastName = W.payment.lastName;
@@ -611,19 +595,17 @@ function saveCardToken() {
     });
 }
 
-// ── Step 3: Review & Confirm ──
+// step 3: review
 
 function renderReview() {
     var html = '';
 
-    // Save info checkbox
     html += '<div class="wiz-card">'
         + '<div class="form-check">'
         + '<input class="form-check-input" type="checkbox" id="saveInfoCheck">'
-        + '<label class="form-check-label" for="saveInfoCheck">Save my information for future purchases</label>'
+        + '<label class="form-check-label" for="saveInfoCheck">Remember my details</label>'
         + '</div></div>';
 
-    // Confirm section
     html += '<div class="wiz-card">'
         + '<div class="wiz-label">CONFIRM</div>'
         + '<p class="text-center text-muted mb-3">Please review and confirm your payment information before you continue.</p>'
@@ -634,7 +616,7 @@ function renderReview() {
     return html;
 }
 
-// ── Submit Payment ──
+// submit
 
 function submitPayment() {
     var btn = document.getElementById('confirmBtn');
@@ -726,7 +708,7 @@ function submitPayment() {
     });
 }
 
-// ── Confirmation ──
+// confirmation page
 
 function showConfirmation() {
     document.getElementById('checkoutPage').style.display = 'none';
@@ -744,7 +726,6 @@ function showConfirmation() {
     html += '<div class="text-primary mb-4">Arrives by ' + futureDate(7) + '</div>';
     html += '<hr>';
 
-    // Items
     for (var i = 0; i < cart.length; i++) {
         var item = cart[i];
         html += '<div class="d-flex align-items-center gap-3 my-3">'
@@ -759,24 +740,19 @@ function showConfirmation() {
 
     html += '<hr class="my-4">';
 
-    // Three columns
     html += '<div class="row g-4">';
-
-    // Order Details
     html += '<div class="col-md-4">'
         + '<h6 class="fw-bold">Order Details</h6>'
         + '<div class="text-muted small">Order Number: <span class="text-dark">' + orderNum + '</span></div>'
         + '<div class="text-muted small">Total: <span class="text-dark fw-semibold">' + fmt(getTotal()) + '</span></div>'
         + '</div>';
 
-    // Shipping Address
     html += '<div class="col-md-4">'
         + '<h6 class="fw-bold">Shipping Address</h6>'
         + '<div class="text-muted small">Type: <span class="text-dark">Standard</span></div>'
         + '<div class="text-muted small">Tracking Number: <span class="text-dark">' + trackingNum + '</span></div>'
         + '</div>';
 
-    // Payment Information
     html += '<div class="col-md-4">'
         + '<h6 class="fw-bold">Payment Information</h6>'
         + '<div class="text-muted small">Status: <span class="text-success fw-semibold">' + esc(data.status || 'AUTHORIZED') + '</span></div>';
@@ -799,7 +775,7 @@ function showConfirmation() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── Form Helpers ──
+// form helpers
 
 function monthOptions(selected) {
     var html = '';
@@ -828,8 +804,6 @@ function provinceOptions(selected) {
     return html;
 }
 
-// ══════════════════════════════════════════
-// SECTION 6: Init
-// ══════════════════════════════════════════
+// --- init ---
 
 document.addEventListener('DOMContentLoaded', function() { updateCartBadge(); });

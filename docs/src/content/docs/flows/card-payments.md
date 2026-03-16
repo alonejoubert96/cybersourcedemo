@@ -7,7 +7,7 @@ description: Authorize, sale, capture, refund, and void credit card transactions
 **[Open Card Checkout →](http://localhost:8080/checkout?method=card)** — or use the legacy API test page at [`/demo/card`](http://localhost:8080/demo/card). Requires `./gradlew bootRun`.
 :::
 
-Card payments are the core flow. The `CardPaymentService` supports the full payment lifecycle: **authorize → capture → refund** or **sale** (auth+capture in one call), plus **void** for cancellations.
+`CardPaymentService` handles **authorize → capture → refund**, **sale** (auth+capture in one step), and **void**.
 
 ## Operations Overview
 
