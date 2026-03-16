@@ -28,13 +28,13 @@ public class InvoiceService {
 
             CreateInvoiceRequest invoiceRequest = new CreateInvoiceRequest();
 
-            // Customer info
             Invoicingv2invoicesCustomerInformation customerInfo = new Invoicingv2invoicesCustomerInformation();
             customerInfo.email(request.getCustomerEmail());
-            customerInfo.name(request.getCustomerName() != null ? request.getCustomerName() : "John Doe");
+            if (request.getCustomerName() != null) {
+                customerInfo.name(request.getCustomerName());
+            }
             invoiceRequest.customerInformation(customerInfo);
 
-            // Invoice information
             Invoicingv2invoicesInvoiceInformation invoiceInfo = new Invoicingv2invoicesInvoiceInformation();
             invoiceInfo.description(request.getDescription());
             if (request.getDueDate() != null) {
@@ -42,14 +42,12 @@ public class InvoiceService {
             }
             invoiceRequest.invoiceInformation(invoiceInfo);
 
-            // Order / amount
             Invoicingv2invoicesOrderInformation orderInfo = new Invoicingv2invoicesOrderInformation();
             Invoicingv2invoicesOrderInformationAmountDetails amountDetails = new Invoicingv2invoicesOrderInformationAmountDetails();
             amountDetails.totalAmount(String.valueOf(request.getAmount()));
             amountDetails.currency(request.getCurrency());
             orderInfo.amountDetails(amountDetails);
 
-            // Line item
             Invoicingv2invoicesOrderInformationLineItems lineItem = new Invoicingv2invoicesOrderInformationLineItems();
             lineItem.productName(request.getDescription());
             lineItem.productSku("DEMO-001");

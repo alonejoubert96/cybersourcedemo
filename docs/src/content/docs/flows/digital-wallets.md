@@ -1,6 +1,6 @@
 ---
 title: Digital Wallets
-description: Google Pay, Apple Pay, and Samsung Pay payments via a unified service.
+description: Google Pay, Apple Pay, and Samsung Pay payments through one service.
 ---
 
 :::tip[Try it live]

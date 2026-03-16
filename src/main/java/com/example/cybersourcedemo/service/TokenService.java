@@ -24,7 +24,7 @@ public class TokenService {
 
     public PaymentResponse storeCustomerCard(TokenRequest request) {
         try {
-            // Step 1: Create instrument identifier (stores the card number)
+            // 1) instrument identifier — stores the PAN
             ApiClient apiClient = apiClientFactory.create();
 
             PostInstrumentIdentifierRequest iiRequest = new PostInstrumentIdentifierRequest();
@@ -36,20 +36,20 @@ public class TokenService {
             PostInstrumentIdentifierRequest iiResponse = iiApi.postInstrumentIdentifier(iiRequest, null, null);
             String instrumentIdentifierId = iiResponse.getId();
 
-            // Step 2: Create customer
+            // 2) customer record
             apiClient = apiClientFactory.create();
 
             PostCustomerRequest customerRequest = new PostCustomerRequest();
             Tmsv2tokenizeTokenInformationCustomerBuyerInformation buyerInfo =
                     new Tmsv2tokenizeTokenInformationCustomerBuyerInformation();
-            buyerInfo.email(request.getEmail() != null ? request.getEmail() : "test@example.com");
+            buyerInfo.email(request.getEmail());
             customerRequest.buyerInformation(buyerInfo);
 
             CustomerApi customerApi = new CustomerApi(apiClient);
             PostCustomerRequest customerResponse = customerApi.postCustomer(customerRequest, null);
             String customerId = customerResponse.getId();
 
-            // Step 3: Add payment instrument to customer with instrument identifier
+            // 3) link payment instrument to customer
             apiClient = apiClientFactory.create();
 
             PostCustomerPaymentInstrumentRequest instrumentRequest = new PostCustomerPaymentInstrumentRequest();
@@ -67,13 +67,13 @@ public class TokenService {
 
             Tmsv2tokenizeTokenInformationCustomerEmbeddedDefaultPaymentInstrumentBillTo billTo =
                     new Tmsv2tokenizeTokenInformationCustomerEmbeddedDefaultPaymentInstrumentBillTo();
-            billTo.firstName(request.getFirstName() != null ? request.getFirstName() : "John");
-            billTo.lastName(request.getLastName() != null ? request.getLastName() : "Doe");
-            billTo.address1("1 Market St");
-            billTo.locality("San Francisco");
-            billTo.administrativeArea("CA");
-            billTo.postalCode("94105");
-            billTo.country("US");
+            billTo.firstName(request.getFirstName());
+            billTo.lastName(request.getLastName());
+            billTo.address1("123 Main Street");
+            billTo.locality("Cape Town");
+            billTo.administrativeArea("Western Cape");
+            billTo.postalCode("8001");
+            billTo.country("ZA");
             instrumentRequest.billTo(billTo);
 
             CustomerPaymentInstrumentApi instrumentApi = new CustomerPaymentInstrumentApi(apiClient);

@@ -27,17 +27,14 @@ public class WalletPaymentService {
 
             CreatePaymentRequest paymentRequest = new CreatePaymentRequest();
 
-            // Client reference
             Ptsv2paymentsClientReferenceInformation clientRef = new Ptsv2paymentsClientReferenceInformation();
             clientRef.code("wallet-" + UUID.randomUUID().toString().substring(0, 8));
             paymentRequest.clientReferenceInformation(clientRef);
 
-            // Processing info with payment solution
             Ptsv2paymentsProcessingInformation processingInfo = new Ptsv2paymentsProcessingInformation();
             processingInfo.paymentSolution(walletType.getPaymentSolution());
             paymentRequest.processingInformation(processingInfo);
 
-            // Tokenized card from wallet
             Ptsv2paymentsPaymentInformation paymentInfo = new Ptsv2paymentsPaymentInformation();
             Ptsv2paymentsPaymentInformationTokenizedCard tokenizedCard = new Ptsv2paymentsPaymentInformationTokenizedCard();
             tokenizedCard.number(request.getTokenData());
@@ -48,7 +45,6 @@ public class WalletPaymentService {
             paymentInfo.tokenizedCard(tokenizedCard);
             paymentRequest.paymentInformation(paymentInfo);
 
-            // Order/amount
             Ptsv2paymentsOrderInformation orderInfo = new Ptsv2paymentsOrderInformation();
             Ptsv2paymentsOrderInformationAmountDetails amountDetails = new Ptsv2paymentsOrderInformationAmountDetails();
             amountDetails.totalAmount(String.valueOf(request.getAmount()));

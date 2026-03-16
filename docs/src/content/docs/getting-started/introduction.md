@@ -3,7 +3,7 @@ title: Introduction
 description: Overview of the CyberShop Payment Demo application.
 ---
 
-This is a **Spring Boot** e-commerce demo application that showcases CyberSource payment integration across multiple payment methods. It provides a full storefront experience (product catalog, shopping cart, multi-step checkout wizard) backed by REST APIs that call the CyberSource sandbox.
+A **Spring Boot** demo app that integrates with the CyberSource REST API. It has a small storefront (product catalog, cart, checkout wizard) backed by REST endpoints that hit the CyberSource sandbox.
 
 ## What's Included
 
@@ -38,7 +38,7 @@ cd "Cybersource Demo"
 # Open http://localhost:8080 in your browser
 ```
 
-The landing page shows the **CyberShop** product catalog with 6 tech products. Add items to your cart, then proceed to checkout where you choose a payment method and walk through a multi-step wizard (Contact → Payment → Review → Confirm). All forms come pre-populated with [valid test data](/reference/test-data/).
+The landing page shows a product catalog. Add items to cart, pick a payment method, and go through the checkout wizard. Forms are pre-filled with [sandbox test data](/reference/test-data/).
 
 ## Checkout Flow
 
@@ -50,7 +50,7 @@ Product Catalog (/)  →  Cart (/cart)  →  Checkout Wizard (/checkout?method=c
                                           → Order Confirmation
 ```
 
-Each completed step collapses into a summary with an **Edit** link, matching real-world checkout patterns.
+Each completed step collapses into a summary with an **Edit** link.
 
 ## Project Layout
 

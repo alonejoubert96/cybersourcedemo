@@ -26,12 +26,10 @@ public class EftPaymentService {
 
             CreatePaymentRequest paymentRequest = new CreatePaymentRequest();
 
-            // Client reference
             Ptsv2paymentsClientReferenceInformation clientRef = new Ptsv2paymentsClientReferenceInformation();
             clientRef.code("eft-" + UUID.randomUUID().toString().substring(0, 8));
             paymentRequest.clientReferenceInformation(clientRef);
 
-            // Payment info — bank account
             Ptsv2paymentsPaymentInformation paymentInfo = new Ptsv2paymentsPaymentInformation();
             Ptsv2paymentsPaymentInformationBank bank = new Ptsv2paymentsPaymentInformationBank();
             Ptsv2paymentsPaymentInformationBankAccount bankAccount = new Ptsv2paymentsPaymentInformationBankAccount();
@@ -46,23 +44,21 @@ public class EftPaymentService {
             paymentInfo.paymentType(paymentType);
             paymentRequest.paymentInformation(paymentInfo);
 
-            // Order/amount
             Ptsv2paymentsOrderInformation orderInfo = new Ptsv2paymentsOrderInformation();
             Ptsv2paymentsOrderInformationAmountDetails amountDetails = new Ptsv2paymentsOrderInformationAmountDetails();
             amountDetails.totalAmount(String.valueOf(request.getAmount()));
             amountDetails.currency(request.getCurrency());
             orderInfo.amountDetails(amountDetails);
 
-            // Bill-to
             Ptsv2paymentsOrderInformationBillTo billTo = new Ptsv2paymentsOrderInformationBillTo();
-            billTo.firstName(request.getFirstName() != null ? request.getFirstName() : "John");
-            billTo.lastName(request.getLastName() != null ? request.getLastName() : "Doe");
-            billTo.email(request.getEmail() != null ? request.getEmail() : "test@example.com");
-            billTo.address1("1 Market St");
-            billTo.locality("San Francisco");
-            billTo.administrativeArea("CA");
-            billTo.postalCode("94105");
-            billTo.country("US");
+            billTo.firstName(request.getFirstName());
+            billTo.lastName(request.getLastName());
+            billTo.email(request.getEmail());
+            billTo.address1("123 Main Street");
+            billTo.locality("Cape Town");
+            billTo.administrativeArea("Western Cape");
+            billTo.postalCode("8001");
+            billTo.country("ZA");
             orderInfo.billTo(billTo);
             paymentRequest.orderInformation(orderInfo);
 
