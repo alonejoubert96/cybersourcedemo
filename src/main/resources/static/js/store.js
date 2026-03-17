@@ -868,6 +868,7 @@ function showConfirmation() {
         + '<div><span class="fw-bold fs-4" style="color:var(--cs-primary);">CyberShop</span></div>'
         + '<span class="fs-3 fw-bold text-success">Order Received</span></div>';
 
+    html += '<div class="text-success fw-semibold mb-1" style="font-size:1.1rem;">Your order was successfully placed</div>';
     html += '<div class="text-primary mb-4">Arrives by ' + futureDate(7) + '</div>';
     html += '<hr>';
 
@@ -903,7 +904,7 @@ function showConfirmation() {
 
     html += '<div class="col-md-4">'
         + '<h6 class="fw-bold">Payment</h6>'
-        + '<div class="text-muted small">Status: <span class="text-success fw-semibold">' + esc(data.status || 'AUTHORIZED') + '</span></div>';
+        + '<div class="text-muted small">Status: <span class="text-success fw-semibold">ACCEPTED</span></div>';
     if (data.transactionId) {
         html += '<div class="text-muted small">Reference: <span class="text-dark">' + esc(data.transactionId) + '</span></div>';
     }
