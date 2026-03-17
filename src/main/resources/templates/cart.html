@@ -76,9 +76,19 @@
                     <div class="d-grid gap-2">
                         <button class="btn pay-method-btn" onclick="goToCheckout('card')">
                             <i class="bi bi-credit-card-2-front me-2"></i>Card Payment
+                            <span class="scheme-icons">
+                                <span class="mini-badge mini-visa">VISA</span>
+                                <span class="mini-badge mini-mc">MC</span>
+                                <span class="mini-badge mini-amex">AMEX</span>
+                            </span>
                         </button>
                         <button class="btn pay-method-btn" onclick="goToCheckout('wallet')">
                             <i class="bi bi-wallet2 me-2"></i>Digital Wallet
+                            <span class="scheme-icons">
+                                <span class="mini-badge mini-gpay">GPay</span>
+                                <span class="mini-badge mini-apay">Apple</span>
+                                <span class="mini-badge mini-spay">Samsung</span>
+                            </span>
                         </button>
                         <button class="btn pay-method-btn" onclick="goToCheckout('eft')">
                             <i class="bi bi-bank me-2"></i>Bank Transfer (EFT)
