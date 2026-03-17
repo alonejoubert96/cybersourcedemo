@@ -306,33 +306,37 @@ function renderPaymentForm() {
     var html = '';
 
     if (W.method === 'card') {
+        html += renderBillingForm();
+        html += renderShippingForm();
         html += renderCardForm();
-        html += renderBillingForm();
-        html += renderShippingForm();
     } else if (W.method === 'wallet') {
+        html += renderBillingForm();
+        html += renderShippingForm();
         html += renderWalletForm();
-        html += renderBillingForm();
-        html += renderShippingForm();
     } else if (W.method === 'eft') {
+        html += renderBillingForm();
+        html += renderShippingForm();
         html += renderEftForm();
-        html += renderBillingForm();
-        html += renderShippingForm();
     } else if (W.method === 'token') {
-        html += renderTokenForm();
         html += renderBillingForm();
         html += renderShippingForm();
+        html += renderTokenForm();
     } else if (W.method === 'invoice') {
         html += renderInvoiceForm();
     } else if (W.method === 'paymentLink') {
         html += renderPaymentLinkForm();
     }
 
-    html += '<div class="text-center mt-4">'
-        + '<button class="wiz-btn" id="step2ContinueBtn" onclick="continuePayment()">Continue</button>'
-        + '</div>';
+    if (W.method !== 'wallet' && W.method !== 'token') {
+        html += '<div class="text-center mt-4">'
+            + '<button class="wiz-btn" id="step2ContinueBtn" onclick="continuePayment()">Continue</button>'
+            + '</div>';
+    }
 
     return html;
 }
+
+function noAuto() { return ' readonly onfocus="this.removeAttribute(\'readonly\')" '; }
 
 function renderCardForm() {
     var pay = W.payment;
@@ -341,7 +345,7 @@ function renderCardForm() {
         + '<div class="mb-3">'
         + '<label class="wiz-field-label">Card number <span class="text-danger">*</span></label>'
         + '<div class="input-group">'
-        + '<input type="text" id="payCardNumber" class="form-control wiz-input" value="' + esc(pay.cardNumber || '') + '" placeholder="Card number" maxlength="19" autocomplete="cc-number" oninput="updateCardBrand(\'payCardNumber\',\'cardBrandTag\')">'
+        + '<input type="text" id="payCardNumber" class="form-control wiz-input"' + noAuto() + 'value="' + esc(pay.cardNumber || '') + '" placeholder="Card number" maxlength="19" oninput="updateCardBrand(\'payCardNumber\',\'cardBrandTag\')">'
         + '<span class="input-group-text" id="cardBrandTag">' + (cardBrandHtml(detectCardBrand(pay.cardNumber || '')) || '<i class="bi bi-credit-card-2-back"></i>') + '</span>'
         + '</div></div>'
         + '<div class="row g-3 mb-3">'
@@ -350,45 +354,51 @@ function renderCardForm() {
         + '<div class="col-4"><label class="wiz-field-label">Expiry year</label>'
         + '<select id="payExpYear" class="form-select wiz-input">' + yearOptions(pay.expYear || '') + '</select></div>'
         + '<div class="col-4"><label class="wiz-field-label">CVV <span class="text-danger">*</span></label>'
-        + '<input type="password" id="payCvv" class="form-control wiz-input" value="' + esc(pay.cvv || '') + '" maxlength="4" placeholder="***" autocomplete="cc-csc">'
+        + '<input type="text" id="payVerifyCode" class="form-control wiz-input"' + noAuto() + 'value="' + esc(pay.cvv || '') + '" maxlength="4" placeholder="3-4 digits" data-lpignore="true" data-form-type="other">'
         + '<div class="form-text" style="font-size:.75rem;">3 or 4 digits</div></div>'
         + '</div>'
         + '<div class="row g-3 mb-2">'
         + '<div class="col-6"><label class="wiz-field-label">First name <span class="text-danger">*</span></label>'
-        + '<input type="text" id="payFirstName" class="form-control wiz-input" value="' + esc(pay.firstName || '') + '" placeholder="First name"></div>'
+        + '<input type="text" id="payFirstName" class="form-control wiz-input"' + noAuto() + 'value="' + esc(pay.firstName || '') + '" placeholder="First name"></div>'
         + '<div class="col-6"><label class="wiz-field-label">Last name <span class="text-danger">*</span></label>'
-        + '<input type="text" id="payLastName" class="form-control wiz-input" value="' + esc(pay.lastName || '') + '" placeholder="Last name"></div>'
+        + '<input type="text" id="payLastName" class="form-control wiz-input"' + noAuto() + 'value="' + esc(pay.lastName || '') + '" placeholder="Last name"></div>'
         + '</div></div>';
 }
 
 function renderWalletForm() {
     var pay = W.payment;
     var sel = pay.walletType || 'GOOGLE_PAY';
-    return '<div class="wiz-card">'
-        + '<div class="wiz-label">WALLET DETAILS</div>'
-        + '<div class="mb-3"><label class="wiz-field-label">Choose Wallet</label>'
-        + '<div class="wallet-tiles">'
-        + '<div class="wallet-tile google-pay' + (sel === 'GOOGLE_PAY' ? ' selected' : '') + '" onclick="selectWallet(\'GOOGLE_PAY\',this)">'
-        + '<span class="wallet-icon"><i class="bi bi-google"></i></span>Google Pay</div>'
-        + '<div class="wallet-tile apple-pay' + (sel === 'APPLE_PAY' ? ' selected' : '') + '" onclick="selectWallet(\'APPLE_PAY\',this)">'
-        + '<span class="wallet-icon"><i class="bi bi-apple"></i></span>Apple Pay</div>'
-        + '<div class="wallet-tile samsung-pay' + (sel === 'SAMSUNG_PAY' ? ' selected' : '') + '" onclick="selectWallet(\'SAMSUNG_PAY\',this)">'
-        + '<span class="wallet-icon"><i class="bi bi-phone"></i></span>Samsung Pay</div>'
-        + '</div>'
-        + '<input type="hidden" id="payWalletType" value="' + sel + '">'
-        + '</div>'
-        + '<div class="mb-3"><label class="wiz-field-label">Card number <span class="text-danger">*</span></label>'
-        + '<div class="input-group">'
-        + '<input type="text" id="payWalletToken" class="form-control wiz-input" value="' + esc(pay.tokenData || '') + '" placeholder="Card number" maxlength="19" oninput="updateCardBrand(\'payWalletToken\',\'walletBrandTag\')">'
-        + '<span class="input-group-text" id="walletBrandTag">' + (cardBrandHtml(detectCardBrand(pay.tokenData || '')) || '<i class="bi bi-credit-card-2-back"></i>') + '</span>'
-        + '</div></div>'
-        + '<div class="row g-3 mb-3">'
-        + '<div class="col-6"><label class="wiz-field-label">Expiry month</label>'
-        + '<select id="payWalletExpMonth" class="form-select wiz-input">' + monthOptions(pay.expMonth || '') + '</select></div>'
-        + '<div class="col-6"><label class="wiz-field-label">Expiry year</label>'
-        + '<select id="payWalletExpYear" class="form-select wiz-input">' + yearOptions(pay.expYear || '') + '</select></div>'
-        + '</div>'
+    var walletNames = { GOOGLE_PAY: 'Google Pay', APPLE_PAY: 'Apple Pay', SAMSUNG_PAY: 'Samsung Pay' };
+    var walletIcons = { GOOGLE_PAY: 'bi-google', APPLE_PAY: 'bi-apple', SAMSUNG_PAY: 'bi-phone' };
+    var walletClasses = { GOOGLE_PAY: 'google-pay', APPLE_PAY: 'apple-pay', SAMSUNG_PAY: 'samsung-pay' };
+
+    var html = '<div class="wiz-card">'
+        + '<div class="wiz-label">DIGITAL WALLET</div>';
+
+    if (pay.walletAuthenticated) {
+        html += '<div class="d-flex align-items-center gap-3 py-2">'
+            + '<i class="bi bi-check-circle-fill text-success fs-4"></i>'
+            + '<div><div class="fw-semibold">' + esc(walletNames[sel]) + ' — Authenticated</div>'
+            + '<div class="text-muted" style="font-size:.9rem;">Token: ' + esc(pay.tokenData || '').substring(0, 8) + '...</div></div>'
+            + '</div>';
+    } else {
+        html += '<div class="mb-3"><label class="wiz-field-label">Choose Wallet</label>'
+            + '<div class="wallet-tiles">'
+            + '<div class="wallet-tile google-pay' + (sel === 'GOOGLE_PAY' ? ' selected' : '') + '" onclick="selectWallet(\'GOOGLE_PAY\',this)">'
+            + '<span class="wallet-icon"><i class="bi bi-google"></i></span>Google Pay</div>'
+            + '<div class="wallet-tile apple-pay' + (sel === 'APPLE_PAY' ? ' selected' : '') + '" onclick="selectWallet(\'APPLE_PAY\',this)">'
+            + '<span class="wallet-icon"><i class="bi bi-apple"></i></span>Apple Pay</div>'
+            + '<div class="wallet-tile samsung-pay' + (sel === 'SAMSUNG_PAY' ? ' selected' : '') + '" onclick="selectWallet(\'SAMSUNG_PAY\',this)">'
+            + '<span class="wallet-icon"><i class="bi bi-phone"></i></span>Samsung Pay</div>'
+            + '</div></div>'
+            + '<button class="wiz-btn w-100 wallet-auth-btn ' + walletClasses[sel] + '" id="walletAuthBtn" onclick="simulateWalletAuth()">'
+            + '<i class="bi ' + walletIcons[sel] + ' me-2"></i>Pay with ' + esc(walletNames[sel])
+            + '</button>';
+    }
+
+    html += '<input type="hidden" id="payWalletType" value="' + sel + '">'
         + '</div>';
+    return html;
 }
 
 function selectWallet(type, el) {
@@ -397,6 +407,102 @@ function selectWallet(type, el) {
     el.classList.add('selected');
     document.getElementById('payWalletType').value = type;
     W.payment.walletType = type;
+
+    var walletNames = { GOOGLE_PAY: 'Google Pay', APPLE_PAY: 'Apple Pay', SAMSUNG_PAY: 'Samsung Pay' };
+    var walletIcons = { GOOGLE_PAY: 'bi-google', APPLE_PAY: 'bi-apple', SAMSUNG_PAY: 'bi-phone' };
+    var walletClasses = { GOOGLE_PAY: 'google-pay', APPLE_PAY: 'apple-pay', SAMSUNG_PAY: 'samsung-pay' };
+    var btn = document.getElementById('walletAuthBtn');
+    if (btn) {
+        btn.className = 'wiz-btn w-100 wallet-auth-btn ' + walletClasses[type];
+        btn.innerHTML = '<i class="bi ' + walletIcons[type] + ' me-2"></i>Pay with ' + walletNames[type];
+    }
+}
+
+function simulateWalletAuth() {
+    var type = document.getElementById('payWalletType').value;
+    var walletNames = { GOOGLE_PAY: 'Google Pay', APPLE_PAY: 'Apple Pay', SAMSUNG_PAY: 'Samsung Pay' };
+    var walletIcons = { GOOGLE_PAY: 'bi-google', APPLE_PAY: 'bi-apple', SAMSUNG_PAY: 'bi-phone' };
+    var walletColors = { GOOGLE_PAY: '#4285F4', APPLE_PAY: '#333', SAMSUNG_PAY: '#1428a0' };
+    var name = walletNames[type] || 'Wallet';
+    var icon = walletIcons[type] || 'bi-wallet2';
+    var color = walletColors[type] || '#333';
+
+    var overlay = document.createElement('div');
+    overlay.id = 'walletOverlay';
+    overlay.className = 'wallet-modal-overlay';
+    overlay.innerHTML = '<div class="wallet-modal">'
+        + '<div class="wallet-modal-header" style="background:' + color + ';">'
+        + '<i class="bi ' + icon + ' fs-3"></i>'
+        + '<span class="fs-5 fw-bold">' + esc(name) + '</span>'
+        + '</div>'
+        + '<div class="wallet-modal-body">'
+        + '<div id="walletAuthStep1">'
+        + '<div class="text-center mb-3"><i class="bi bi-fingerprint" style="font-size:3rem;color:' + color + ';"></i></div>'
+        + '<div class="fw-semibold text-center mb-1">Verify your identity</div>'
+        + '<div class="text-muted text-center mb-4" style="font-size:.9rem;">Use your fingerprint or device PIN to confirm</div>'
+        + '<div class="text-center mb-2 text-muted" style="font-size:.8rem;">Card ending in 1111 &bull; Visa</div>'
+        + '<div class="text-center mb-3 fw-bold fs-5" style="color:' + color + ';">' + fmt(getTotal()) + '</div>'
+        + '<button class="btn w-100 text-white fw-semibold py-2" style="background:' + color + ';border:none;border-radius:8px;" onclick="completeWalletAuth()">'
+        + '<i class="bi bi-fingerprint me-2"></i>Authenticate</button>'
+        + '</div>'
+        + '<div id="walletAuthStep2" style="display:none;" class="text-center py-3">'
+        + '<div class="spinner-border mb-3" style="color:' + color + ';width:2.5rem;height:2.5rem;" role="status"></div>'
+        + '<div class="fw-semibold">Verifying with ' + esc(name) + '...</div>'
+        + '</div>'
+        + '<div id="walletAuthStep3" style="display:none;" class="text-center py-3">'
+        + '<i class="bi bi-check-circle-fill text-success" style="font-size:3rem;"></i>'
+        + '<div class="fw-semibold mt-2">Payment authorised</div>'
+        + '<div class="text-muted" style="font-size:.85rem;">Token received from ' + esc(name) + '</div>'
+        + '</div>'
+        + '</div>'
+        + '<div class="wallet-modal-footer">'
+        + '<button class="btn btn-sm btn-link text-muted" onclick="cancelWalletAuth()">Cancel</button>'
+        + '</div>'
+        + '</div>';
+    document.body.appendChild(overlay);
+    setTimeout(function() { overlay.classList.add('show'); }, 10);
+}
+
+function completeWalletAuth() {
+    document.getElementById('walletAuthStep1').style.display = 'none';
+    document.getElementById('walletAuthStep2').style.display = 'block';
+
+    // save billing/shipping while the spinner is showing
+    W.billing = saveAddressFromForm('billing');
+    W.shippingSame = document.getElementById('shippingSame').checked;
+    if (!W.shippingSame) W.shipping = saveAddressFromForm('shipping');
+
+    setTimeout(function() {
+        document.getElementById('walletAuthStep2').style.display = 'none';
+        document.getElementById('walletAuthStep3').style.display = 'block';
+
+        var type = document.getElementById('payWalletType').value;
+        var fakeToken = 'DTOKEN-' + type + '-' + Date.now();
+        W.payment.walletType = type;
+        W.payment.tokenData = fakeToken;
+        W.payment.walletAuthenticated = true;
+
+        setTimeout(function() {
+            cancelWalletAuth();
+            // skip review — go straight to confirmation
+            var walletNames = { GOOGLE_PAY: 'Google Pay', APPLE_PAY: 'Apple Pay', SAMSUNG_PAY: 'Samsung Pay' };
+            W.apiResult = {
+                status: 'AUTHORIZED',
+                transactionId: 'SIM-' + Date.now(),
+                message: walletNames[type] + ' payment successful',
+                httpStatus: 201
+            };
+            showConfirmation();
+        }, 1200);
+    }, 1500);
+}
+
+function cancelWalletAuth() {
+    var overlay = document.getElementById('walletOverlay');
+    if (overlay) {
+        overlay.classList.remove('show');
+        setTimeout(function() { overlay.remove(); }, 200);
+    }
 }
 
 function renderEftForm() {
@@ -405,9 +511,9 @@ function renderEftForm() {
         + '<div class="wiz-label">BANK ACCOUNT DETAILS</div>'
         + '<div class="row g-3 mb-3">'
         + '<div class="col-6"><label class="wiz-field-label">Routing Number (ABA) <span class="text-danger">*</span></label>'
-        + '<input type="text" id="payRouting" class="form-control wiz-input" value="' + esc(pay.routingNumber || '') + '" placeholder="9 digits"></div>'
+        + '<input type="text" id="payRouting" class="form-control wiz-input"' + noAuto() + 'value="' + esc(pay.routingNumber || '') + '" placeholder="9 digits"></div>'
         + '<div class="col-6"><label class="wiz-field-label">Account Number <span class="text-danger">*</span></label>'
-        + '<input type="text" id="payAccount" class="form-control wiz-input" value="' + esc(pay.accountNumber || '') + '" placeholder="Account number"></div>'
+        + '<input type="text" id="payAccount" class="form-control wiz-input"' + noAuto() + 'value="' + esc(pay.accountNumber || '') + '" placeholder="Account number"></div>'
         + '</div>'
         + '<div class="mb-3"><label class="wiz-field-label">Account Type</label>'
         + '<select id="payAccountType" class="form-select wiz-input">'
@@ -416,50 +522,57 @@ function renderEftForm() {
         + '</select></div>'
         + '<div class="row g-3 mb-2">'
         + '<div class="col-6"><label class="wiz-field-label">First name <span class="text-danger">*</span></label>'
-        + '<input type="text" id="payEftFirstName" class="form-control wiz-input" value="' + esc(pay.firstName || '') + '" placeholder="First name"></div>'
+        + '<input type="text" id="payEftFirstName" class="form-control wiz-input"' + noAuto() + 'value="' + esc(pay.firstName || '') + '" placeholder="First name"></div>'
         + '<div class="col-6"><label class="wiz-field-label">Last name <span class="text-danger">*</span></label>'
-        + '<input type="text" id="payEftLastName" class="form-control wiz-input" value="' + esc(pay.lastName || '') + '" placeholder="Last name"></div>'
+        + '<input type="text" id="payEftLastName" class="form-control wiz-input"' + noAuto() + 'value="' + esc(pay.lastName || '') + '" placeholder="Last name"></div>'
         + '</div></div>';
 }
 
+var SAVED_CARDS = [
+    { id: 'tok_1', brand: 'visa',       last4: '1111', expiry: '12/28', name: 'Personal Visa' },
+    { id: 'tok_2', brand: 'mastercard', last4: '5432', expiry: '09/27', name: 'Business Mastercard' },
+    { id: 'tok_3', brand: 'amex',       last4: '0005', expiry: '03/29', name: 'Amex Platinum' }
+];
+
 function renderTokenForm() {
-    var pay = W.payment;
-    if (W.savedCustomerId) {
+    var selected = W.payment.savedCardId || '';
+
+    if (W.payment.savedCardAuthenticated) {
+        var card = null;
+        for (var i = 0; i < SAVED_CARDS.length; i++) { if (SAVED_CARDS[i].id === selected) { card = SAVED_CARDS[i]; break; } }
         return '<div class="wiz-card">'
             + '<div class="wiz-label">SAVED CARD</div>'
             + '<div class="d-flex align-items-center gap-3 py-2">'
             + '<i class="bi bi-check-circle-fill text-success fs-4"></i>'
-            + '<div><div class="fw-semibold">Card saved</div>'
-            + '<div class="text-muted" style="font-size:.9rem;">' + maskCard(W.payment.cardNumber) + '</div></div>'
+            + '<div><div class="fw-semibold">' + esc(card ? card.name : 'Card') + ' — Authenticated</div>'
+            + '<div class="text-muted" style="font-size:.9rem;">' + cardBrandHtml(card ? card.brand : '') + ' **** ' + esc(card ? card.last4 : '') + '</div></div>'
             + '</div></div>';
     }
-    return '<div class="wiz-card">'
-        + '<div class="wiz-label">SAVE YOUR CARD</div>'
-        + '<p class="text-muted" style="font-size:.9rem;">Save your card details to skip this step next time.</p>'
-        + '<div class="mb-3"><label class="wiz-field-label">Card number <span class="text-danger">*</span></label>'
-        + '<div class="input-group">'
-        + '<input type="text" id="payTokenCard" class="form-control wiz-input" value="' + esc(pay.cardNumber || '') + '" placeholder="Card number" maxlength="19" autocomplete="cc-number" oninput="updateCardBrand(\'payTokenCard\',\'tokenBrandTag\')">'
-        + '<span class="input-group-text" id="tokenBrandTag">' + (cardBrandHtml(detectCardBrand(pay.cardNumber || '')) || '<i class="bi bi-credit-card-2-back"></i>') + '</span>'
-        + '</div></div>'
-        + '<div class="row g-3 mb-3">'
-        + '<div class="col-4"><label class="wiz-field-label">Expiry month</label>'
-        + '<select id="payTokenExpMonth" class="form-select wiz-input">' + monthOptions(pay.expMonth || '') + '</select></div>'
-        + '<div class="col-4"><label class="wiz-field-label">Expiry year</label>'
-        + '<select id="payTokenExpYear" class="form-select wiz-input">' + yearOptions(pay.expYear || '') + '</select></div>'
-        + '<div class="col-4"><label class="wiz-field-label">CVV</label>'
-        + '<input type="password" id="payTokenCvv" class="form-control wiz-input" value="' + esc(pay.cvv || '') + '" maxlength="4" placeholder="***" autocomplete="cc-csc">'
-        + '<div class="form-text" style="font-size:.75rem;">3 or 4 digits</div></div>'
-        + '</div>'
-        + '<div class="row g-3 mb-3">'
-        + '<div class="col-6"><label class="wiz-field-label">First name <span class="text-danger">*</span></label>'
-        + '<input type="text" id="payTokenFirstName" class="form-control wiz-input" value="' + esc(pay.firstName || '') + '" placeholder="First name"></div>'
-        + '<div class="col-6"><label class="wiz-field-label">Last name <span class="text-danger">*</span></label>'
-        + '<input type="text" id="payTokenLastName" class="form-control wiz-input" value="' + esc(pay.lastName || '') + '" placeholder="Last name"></div>'
-        + '</div>'
-        + '<button class="wiz-btn w-100" id="btnSaveCard" onclick="saveCardToken()">'
-        + '<i class="bi bi-lock-fill me-1"></i> Save Card</button>'
-        + '<div id="tokenError" class="mt-2"></div>'
+
+    var html = '<div class="wiz-card">'
+        + '<div class="wiz-label">SELECT A SAVED CARD</div>'
+        + '<p class="text-muted" style="font-size:.9rem;">Choose a card from your vault to pay with.</p>';
+
+    for (var i = 0; i < SAVED_CARDS.length; i++) {
+        var c = SAVED_CARDS[i];
+        var isSelected = selected === c.id;
+        html += '<div class="saved-card-option' + (isSelected ? ' selected' : '') + '" onclick="selectSavedCard(\'' + c.id + '\')">'
+            + '<div class="d-flex align-items-center gap-3">'
+            + '<div class="saved-card-radio">' + (isSelected ? '<div class="saved-card-radio-dot"></div>' : '') + '</div>'
+            + '<div class="flex-grow-1">'
+            + '<div class="d-flex align-items-center gap-2">'
+            + cardBrandHtml(c.brand)
+            + ' <span class="fw-semibold">' + esc(c.name) + '</span></div>'
+            + '<div class="text-muted" style="font-size:.85rem;">**** **** **** ' + esc(c.last4) + ' &bull; Exp ' + esc(c.expiry) + '</div>'
+            + '</div>'
+            + '<i class="bi bi-shield-lock text-muted"></i>'
+            + '</div></div>';
+    }
+
+    html += '<button class="wiz-btn w-100 mt-3' + (selected ? '' : ' disabled') + '" id="btnSavedCardAuth" onclick="simulateSavedCardAuth()"' + (selected ? '' : ' disabled') + '>'
+        + '<i class="bi bi-lock-fill me-2"></i>Pay with Saved Card</button>'
         + '</div>';
+    return html;
 }
 
 function renderInvoiceForm() {
@@ -477,11 +590,14 @@ function renderInvoiceForm() {
 
 function renderPaymentLinkForm() {
     var pay = W.payment;
+    var due = new Date(); due.setDate(due.getDate() + 7);
     return '<div class="wiz-card">'
         + '<div class="wiz-label">PAYMENT LINK DETAILS</div>'
-        + '<div class="mb-2"><label class="wiz-field-label">Description</label>'
+        + '<div class="mb-3"><label class="wiz-field-label">Description</label>'
         + '<input type="text" id="payLinkDesc" class="form-control wiz-input" value="' + esc(pay.description || '') + '" placeholder="Payment description"></div>'
-        + '<div class="form-text">A hosted payment URL will be generated.</div>'
+        + '<div class="mb-2"><label class="wiz-field-label">Link Expiry Date</label>'
+        + '<input type="date" id="payLinkDue" class="form-control wiz-input" value="' + esc(pay.dueDate || due.toISOString().split('T')[0]) + '"></div>'
+        + '<div class="form-text">A secure hosted payment page link will be created and emailed to you.</div>'
         + '</div>';
 }
 
@@ -572,13 +688,18 @@ function renderPaymentSummary() {
         summary = '<div class="d-flex align-items-center gap-2">' + (cardBrand || '<i class="bi bi-credit-card-2-front fs-5"></i>') + ' <span>' + maskCard(W.payment.cardNumber) + '</span></div>';
     } else if (W.method === 'wallet') {
         var wNames = { GOOGLE_PAY: 'Google Pay', APPLE_PAY: 'Apple Pay', SAMSUNG_PAY: 'Samsung Pay' };
-        var walletBrand = cardBrandHtml(detectCardBrand(W.payment.tokenData));
-        summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-wallet2 fs-5"></i> <span>' + (wNames[W.payment.walletType] || 'Wallet') + ' — ' + maskCard(W.payment.tokenData) + '</span> ' + walletBrand + '</div>';
+        var wIcons = { GOOGLE_PAY: 'bi-google', APPLE_PAY: 'bi-apple', SAMSUNG_PAY: 'bi-phone' };
+        summary = '<div class="d-flex align-items-center gap-2"><i class="bi ' + (wIcons[W.payment.walletType] || 'bi-wallet2') + ' fs-5"></i> <span>' + (wNames[W.payment.walletType] || 'Wallet') + ' — Authenticated</span></div>';
     } else if (W.method === 'eft') {
         summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-bank fs-5"></i> <span>Account ending in ' + (W.payment.accountNumber || '').slice(-4) + '</span></div>';
     } else if (W.method === 'token') {
-        var tokenBrand = cardBrandHtml(detectCardBrand(W.payment.cardNumber));
-        summary = '<div class="d-flex align-items-center gap-2">' + (tokenBrand || '<i class="bi bi-shield-check fs-5"></i>') + ' <span>Saved card — ' + maskCard(W.payment.cardNumber) + '</span></div>';
+        var savedCard = null;
+        for (var i = 0; i < SAVED_CARDS.length; i++) { if (SAVED_CARDS[i].id === W.payment.savedCardId) { savedCard = SAVED_CARDS[i]; break; } }
+        if (savedCard) {
+            summary = '<div class="d-flex align-items-center gap-2">' + cardBrandHtml(savedCard.brand) + ' <span>' + esc(savedCard.name) + ' — **** ' + esc(savedCard.last4) + '</span></div>';
+        } else {
+            summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-shield-check fs-5"></i> <span>Saved card</span></div>';
+        }
     } else if (W.method === 'invoice') {
         summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-receipt fs-5"></i> <span>Invoice</span></div>';
     } else if (W.method === 'paymentLink') {
@@ -643,7 +764,7 @@ function continuePayment() {
             cardNumber: cn,
             expMonth: document.getElementById('payExpMonth').value,
             expYear: document.getElementById('payExpYear').value,
-            cvv: document.getElementById('payCvv').value,
+            cvv: document.getElementById('payVerifyCode').value,
             firstName: document.getElementById('payFirstName').value.trim(),
             lastName: document.getElementById('payLastName').value.trim()
         };
@@ -651,33 +772,31 @@ function continuePayment() {
         W.shippingSame = document.getElementById('shippingSame').checked;
         if (!W.shippingSame) W.shipping = saveAddressFromForm('shipping');
     } else if (W.method === 'wallet') {
-        var wt = document.getElementById('payWalletToken').value.trim();
-        if (!wt) { document.getElementById('payWalletToken').focus(); return; }
-        W.payment = {
-            walletType: document.getElementById('payWalletType').value,
-            tokenData: wt,
-            expMonth: document.getElementById('payWalletExpMonth').value,
-            expYear: document.getElementById('payWalletExpYear').value
-        };
+        if (!W.payment.walletAuthenticated) { return; }
         W.billing = saveAddressFromForm('billing');
         W.shippingSame = document.getElementById('shippingSame').checked;
         if (!W.shippingSame) W.shipping = saveAddressFromForm('shipping');
     } else if (W.method === 'eft') {
+        var rn = document.getElementById('payRouting').value.trim();
+        var an = document.getElementById('payAccount').value.trim();
+        if (!rn) { document.getElementById('payRouting').focus(); return; }
+        if (!an) { document.getElementById('payAccount').focus(); return; }
+        var efn = document.getElementById('payEftFirstName').value.trim();
+        var eln = document.getElementById('payEftLastName').value.trim();
+        if (!efn) { document.getElementById('payEftFirstName').focus(); return; }
+        if (!eln) { document.getElementById('payEftLastName').focus(); return; }
         W.payment = {
-            routingNumber: document.getElementById('payRouting').value.trim(),
-            accountNumber: document.getElementById('payAccount').value.trim(),
+            routingNumber: rn,
+            accountNumber: an,
             accountType: document.getElementById('payAccountType').value,
-            firstName: document.getElementById('payEftFirstName').value.trim(),
-            lastName: document.getElementById('payEftLastName').value.trim()
+            firstName: efn,
+            lastName: eln
         };
         W.billing = saveAddressFromForm('billing');
         W.shippingSame = document.getElementById('shippingSame').checked;
         if (!W.shippingSame) W.shipping = saveAddressFromForm('shipping');
     } else if (W.method === 'token') {
-        if (!W.savedCustomerId) { return; }
-        W.billing = saveAddressFromForm('billing');
-        W.shippingSame = document.getElementById('shippingSame').checked;
-        if (!W.shippingSame) W.shipping = saveAddressFromForm('shipping');
+        if (!W.payment.savedCardAuthenticated) { return; }
     } else if (W.method === 'invoice') {
         W.payment = {
             description: document.getElementById('payInvoiceDesc').value.trim(),
@@ -685,7 +804,8 @@ function continuePayment() {
         };
     } else if (W.method === 'paymentLink') {
         W.payment = {
-            description: document.getElementById('payLinkDesc').value.trim()
+            description: document.getElementById('payLinkDesc').value.trim(),
+            dueDate: document.getElementById('payLinkDue').value
         };
     }
 
@@ -694,43 +814,85 @@ function continuePayment() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function saveCardToken() {
-    var btn = document.getElementById('btnSaveCard');
-    var cn = document.getElementById('payTokenCard').value.trim();
-    if (!cn) { document.getElementById('payTokenCard').focus(); return; }
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+function selectSavedCard(cardId) {
+    W.payment.savedCardId = cardId;
+    renderWizard();
+}
 
-    var cvv = document.getElementById('payTokenCvv') ? document.getElementById('payTokenCvv').value.trim() : '';
-    W.payment = {
-        cardNumber: cn,
-        expMonth: document.getElementById('payTokenExpMonth').value,
-        expYear: document.getElementById('payTokenExpYear').value,
-        cvv: cvv,
-        firstName: document.getElementById('payTokenFirstName').value.trim(),
-        lastName: document.getElementById('payTokenLastName').value.trim()
-    };
+function simulateSavedCardAuth() {
+    if (!W.payment.savedCardId) return;
+    var card = null;
+    for (var i = 0; i < SAVED_CARDS.length; i++) { if (SAVED_CARDS[i].id === W.payment.savedCardId) { card = SAVED_CARDS[i]; break; } }
+    if (!card) return;
 
-    var body = {
-        cardNumber: W.payment.cardNumber,
-        expirationMonth: W.payment.expMonth,
-        expirationYear: W.payment.expYear,
-        firstName: W.payment.firstName,
-        lastName: W.payment.lastName,
-        email: W.contact.email
-    };
-    if (cvv) body.securityCode = cvv;
-    callApi('/api/tokens/customers', 'POST', body).then(function(result) {
-        if (result.ok && result.data.transactionId) {
-            W.savedCustomerId = result.data.transactionId;
-            renderWizard();
-        } else {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-lock-fill me-1"></i> Save Card';
-            document.getElementById('tokenError').innerHTML =
-                '<div class="alert alert-danger py-2 small">' + esc(result.data.message || 'Failed to save card') + '</div>';
-        }
-    });
+    var brandLabels = { visa: 'Visa', mastercard: 'Mastercard', amex: 'American Express', discover: 'Discover' };
+    var brandColors = { visa: '#1a1f71', mastercard: '#eb001b', amex: '#2e77bc', discover: '#ff6600' };
+    var color = brandColors[card.brand] || '#333';
+    var label = brandLabels[card.brand] || 'Card';
+
+    var overlay = document.createElement('div');
+    overlay.id = 'walletOverlay';
+    overlay.className = 'wallet-modal-overlay';
+    overlay.innerHTML = '<div class="wallet-modal">'
+        + '<div class="wallet-modal-header" style="background:' + color + ';">'
+        + '<i class="bi bi-shield-lock-fill fs-3"></i>'
+        + '<span class="fs-5 fw-bold">Verify Payment</span>'
+        + '</div>'
+        + '<div class="wallet-modal-body">'
+        + '<div id="walletAuthStep1">'
+        + '<div class="text-center mb-3"><i class="bi bi-fingerprint" style="font-size:3rem;color:' + color + ';"></i></div>'
+        + '<div class="fw-semibold text-center mb-1">Confirm with ' + esc(label) + '</div>'
+        + '<div class="text-muted text-center mb-3" style="font-size:.9rem;">Authenticate to pay with your saved card</div>'
+        + '<div class="text-center mb-2">' + cardBrandHtml(card.brand) + ' <span class="text-muted">**** ' + esc(card.last4) + '</span></div>'
+        + '<div class="text-center mb-3 fw-bold fs-5" style="color:' + color + ';">' + fmt(getTotal()) + '</div>'
+        + '<button class="btn w-100 text-white fw-semibold py-2" style="background:' + color + ';border:none;border-radius:8px;" onclick="completeSavedCardAuth()">'
+        + '<i class="bi bi-fingerprint me-2"></i>Authenticate</button>'
+        + '</div>'
+        + '<div id="walletAuthStep2" style="display:none;" class="text-center py-3">'
+        + '<div class="spinner-border mb-3" style="color:' + color + ';width:2.5rem;height:2.5rem;" role="status"></div>'
+        + '<div class="fw-semibold">Verifying payment...</div>'
+        + '</div>'
+        + '<div id="walletAuthStep3" style="display:none;" class="text-center py-3">'
+        + '<i class="bi bi-check-circle-fill text-success" style="font-size:3rem;"></i>'
+        + '<div class="fw-semibold mt-2">Payment authorised</div>'
+        + '<div class="text-muted" style="font-size:.85rem;">' + esc(label) + ' ending in ' + esc(card.last4) + '</div>'
+        + '</div>'
+        + '</div>'
+        + '<div class="wallet-modal-footer">'
+        + '<button class="btn btn-sm btn-link text-muted" onclick="cancelWalletAuth()">Cancel</button>'
+        + '</div>'
+        + '</div>';
+    document.body.appendChild(overlay);
+    setTimeout(function() { overlay.classList.add('show'); }, 10);
+}
+
+function completeSavedCardAuth() {
+    document.getElementById('walletAuthStep1').style.display = 'none';
+    document.getElementById('walletAuthStep2').style.display = 'block';
+
+    W.billing = saveAddressFromForm('billing');
+    W.shippingSame = document.getElementById('shippingSame').checked;
+    if (!W.shippingSame) W.shipping = saveAddressFromForm('shipping');
+
+    setTimeout(function() {
+        document.getElementById('walletAuthStep2').style.display = 'none';
+        document.getElementById('walletAuthStep3').style.display = 'block';
+
+        W.payment.savedCardAuthenticated = true;
+
+        setTimeout(function() {
+            cancelWalletAuth();
+            var card = null;
+            for (var i = 0; i < SAVED_CARDS.length; i++) { if (SAVED_CARDS[i].id === W.payment.savedCardId) { card = SAVED_CARDS[i]; break; } }
+            W.apiResult = {
+                status: 'AUTHORIZED',
+                transactionId: 'TOK-' + Date.now(),
+                message: 'Saved card payment successful',
+                httpStatus: 201
+            };
+            showConfirmation();
+        }, 1200);
+    }, 1500);
 }
 
 // step 3: review
@@ -777,13 +939,15 @@ function submitPayment() {
             currency: 'ZAR'
         });
     } else if (W.method === 'wallet') {
-        promise = callApi('/api/payments/wallet/' + W.payment.walletType, 'POST', {
-            tokenData: W.payment.tokenData,
-            expirationMonth: W.payment.expMonth,
-            expirationYear: W.payment.expYear,
-            cryptogram: 'none',
-            amount: parseFloat(total.toFixed(2)),
-            currency: 'ZAR'
+        var walletNames = { GOOGLE_PAY: 'Google Pay', APPLE_PAY: 'Apple Pay', SAMSUNG_PAY: 'Samsung Pay' };
+        promise = Promise.resolve({
+            ok: true,
+            data: {
+                status: 'AUTHORIZED',
+                transactionId: 'SIM-' + Date.now(),
+                message: walletNames[W.payment.walletType] + ' payment successful',
+                httpStatus: 201
+            }
         });
     } else if (W.method === 'eft') {
         promise = callApi('/api/payments/eft', 'POST', {
@@ -797,16 +961,21 @@ function submitPayment() {
             currency: 'USD'
         });
     } else if (W.method === 'token') {
-        promise = callApi('/api/tokens/pay', 'POST', {
-            customerId: W.savedCustomerId,
-            amount: parseFloat(total.toFixed(2)),
-            currency: 'ZAR'
+        promise = Promise.resolve({
+            ok: true,
+            data: {
+                status: 'AUTHORIZED',
+                transactionId: 'TOK-' + Date.now(),
+                message: 'Saved card payment successful',
+                httpStatus: 201
+            }
         });
     } else if (W.method === 'invoice') {
+        var invName = ((W.billing.firstName || '') + ' ' + (W.billing.lastName || '')).trim() || W.contact.email;
         promise = callApi('/api/invoices', 'POST', {
             customerEmail: W.contact.email,
-            customerName: W.billing.firstName + ' ' + W.billing.lastName,
-            description: W.payment.description,
+            customerName: invName,
+            description: W.payment.description || 'CyberShop Order',
             amount: parseFloat(total.toFixed(2)),
             currency: 'ZAR',
             dueDate: W.payment.dueDate || null
@@ -824,19 +993,32 @@ function submitPayment() {
             return result;
         });
     } else if (W.method === 'paymentLink') {
-        promise = callApi('/api/payment-links', 'POST', {
-            description: W.payment.description,
+        promise = callApi('/api/invoices', 'POST', {
+            customerEmail: W.contact.email,
+            customerName: W.contact.email,
+            description: W.payment.description || 'CyberShop Payment',
             amount: parseFloat(total.toFixed(2)),
-            currency: 'ZAR'
+            currency: 'ZAR',
+            dueDate: W.payment.dueDate || null
+        }).then(function(result) {
+            if (result.ok && result.data.transactionId) {
+                return callApi('/api/invoices/' + result.data.transactionId + '/send', 'POST', {}).then(function(sendResult) {
+                    if (sendResult.ok) {
+                        sendResult.data.message = 'Payment link sent to ' + W.contact.email;
+                        sendResult.data.details = sendResult.data.details || {};
+                        sendResult.data.details.linkId = result.data.transactionId;
+                    }
+                    return sendResult;
+                });
+            }
+            return result;
         });
     }
 
-    // clear sensitive data from memory after submitting
     var cardNum = W.payment.cardNumber;
     var cvv = W.payment.cvv;
 
     promise.then(function(result) {
-        // wipe PAN and CVV from state immediately
         if (W.payment.cardNumber) W.payment.cardNumber = maskCard(cardNum);
         delete W.payment.cvv;
 
@@ -864,12 +1046,25 @@ function showConfirmation() {
     var orderNum = generateOrderNumber();
     var trackingNum = generateTrackingNumber();
 
+    var isInvoice = W.method === 'invoice';
+    var isPaymentLink = W.method === 'paymentLink';
+    var isPending = isInvoice || isPaymentLink;
+
     var html = '<div class="d-flex justify-content-between align-items-start mb-2">'
         + '<div><span class="fw-bold fs-4" style="color:var(--cs-primary);">CyberShop</span></div>'
-        + '<span class="fs-3 fw-bold text-success">Order Received</span></div>';
+        + '<span class="fs-3 fw-bold ' + (isPending ? 'text-primary' : 'text-success') + '">'
+        + (isInvoice ? 'Invoice Sent' : isPaymentLink ? 'Payment Link Sent' : 'Order Received') + '</span></div>';
 
-    html += '<div class="text-success fw-semibold mb-1" style="font-size:1.1rem;">Your order was successfully placed</div>';
-    html += '<div class="text-primary mb-4">Arrives by ' + futureDate(7) + '</div>';
+    if (isInvoice) {
+        html += '<div class="text-primary fw-semibold mb-1" style="font-size:1.1rem;"><i class="bi bi-envelope-check me-2"></i>An invoice has been sent to ' + esc(W.contact.email) + '</div>';
+        html += '<div class="text-muted mb-4">Please complete payment using the link in the invoice email to confirm your order.</div>';
+    } else if (isPaymentLink) {
+        html += '<div class="text-primary fw-semibold mb-1" style="font-size:1.1rem;"><i class="bi bi-link-45deg me-2"></i>A payment link has been generated</div>';
+        html += '<div class="text-muted mb-4">Please complete payment using the provided link to confirm your order.</div>';
+    } else {
+        html += '<div class="text-success fw-semibold mb-1" style="font-size:1.1rem;">Your order was successfully placed</div>';
+        html += '<div class="text-primary mb-4">Arrives by ' + futureDate(7) + '</div>';
+    }
     html += '<hr>';
 
     for (var i = 0; i < cart.length; i++) {
@@ -893,18 +1088,21 @@ function showConfirmation() {
         + '<div class="text-muted small">Total: <span class="text-dark fw-semibold">' + fmt(getTotal()) + '</span></div>'
         + '</div>';
 
-    var shipAddr = W.shippingSame ? W.billing : W.shipping;
-    html += '<div class="col-md-4">'
-        + '<h6 class="fw-bold">Shipping Address</h6>'
-        + '<div class="text-muted small">' + esc(shipAddr.firstName) + ' ' + esc(shipAddr.lastName) + '</div>'
-        + '<div class="text-muted small">' + esc(shipAddr.address) + '</div>'
-        + '<div class="text-muted small">' + esc(shipAddr.city) + ', ' + esc(shipAddr.state) + ' ' + esc(shipAddr.zip) + '</div>'
-        + '<div class="text-muted small mt-1">Tracking: <span class="text-dark">' + trackingNum + '</span></div>'
-        + '</div>';
+    if (!isPending) {
+        var shipAddr = W.shippingSame ? W.billing : W.shipping;
+        html += '<div class="col-md-4">'
+            + '<h6 class="fw-bold">Shipping Address</h6>'
+            + '<div class="text-muted small">' + esc(shipAddr.firstName) + ' ' + esc(shipAddr.lastName) + '</div>'
+            + '<div class="text-muted small">' + esc(shipAddr.address) + '</div>'
+            + '<div class="text-muted small">' + esc(shipAddr.city) + ', ' + esc(shipAddr.state) + ' ' + esc(shipAddr.zip) + '</div>'
+            + '<div class="text-muted small mt-1">Tracking: <span class="text-dark">' + trackingNum + '</span></div>'
+            + '</div>';
+    }
 
     html += '<div class="col-md-4">'
         + '<h6 class="fw-bold">Payment</h6>'
-        + '<div class="text-muted small">Status: <span class="text-success fw-semibold">ACCEPTED</span></div>';
+        + '<div class="text-muted small">Status: <span class="' + (isPending ? 'text-warning' : 'text-success') + ' fw-semibold">'
+        + (isPending ? 'PENDING' : 'ACCEPTED') + '</span></div>';
     if (data.transactionId) {
         html += '<div class="text-muted small">Reference: <span class="text-dark">' + esc(data.transactionId) + '</span></div>';
     }

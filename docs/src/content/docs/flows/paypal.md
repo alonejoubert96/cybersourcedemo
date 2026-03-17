@@ -12,9 +12,6 @@ PayPal integration is **stubbed but not implemented**. The `PayPalPaymentService
 ```java
 @Service
 public class PayPalPaymentService {
-    // TODO: Implement PayPal payment integration
-    // Requires merchant-level alternative payment method configuration
-    // See BillingAgreementsApi in the CyberSource SDK
 }
 ```
 

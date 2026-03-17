@@ -24,7 +24,6 @@ public class TokenService {
 
     public PaymentResponse storeCustomerCard(TokenRequest request) {
         try {
-            // 1) instrument identifier — stores the PAN
             ApiClient apiClient = apiClientFactory.create();
 
             PostInstrumentIdentifierRequest iiRequest = new PostInstrumentIdentifierRequest();
@@ -36,7 +35,6 @@ public class TokenService {
             PostInstrumentIdentifierRequest iiResponse = iiApi.postInstrumentIdentifier(iiRequest, null, null);
             String instrumentIdentifierId = iiResponse.getId();
 
-            // 2) customer record
             apiClient = apiClientFactory.create();
 
             PostCustomerRequest customerRequest = new PostCustomerRequest();
@@ -49,7 +47,6 @@ public class TokenService {
             PostCustomerRequest customerResponse = customerApi.postCustomer(customerRequest, null);
             String customerId = customerResponse.getId();
 
-            // 3) link payment instrument to customer
             apiClient = apiClientFactory.create();
 
             PostCustomerPaymentInstrumentRequest instrumentRequest = new PostCustomerPaymentInstrumentRequest();
