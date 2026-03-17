@@ -1,59 +1,85 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Landing Page', () => {
-  test('displays all payment method cards', async ({ page }) => {
+test.describe('Product Catalog', () => {
+  test('displays welcome heading and sandbox badge', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('h2')).toContainText('Choose a Payment Method');
-
-    // All 7 cards (6 active + 1 disabled PayPal)
-    const cards = page.locator('.card');
-    await expect(cards).toHaveCount(7);
-
-    // Active payment methods with links
-    const links = page.locator('a .card');
-    await expect(links).toHaveCount(6);
-
-    // Verify each payment method is listed
-    const body = page.locator('body');
-    await expect(body).toContainText('Credit Card');
-    await expect(body).toContainText('Digital Wallets');
-    await expect(body).toContainText('EFT / eCheck');
-    await expect(body).toContainText('Tokenized Payments');
-    await expect(body).toContainText('Invoices');
-    await expect(body).toContainText('Payment Links');
-    await expect(body).toContainText('PayPal');
+    await expect(page.locator('h1')).toContainText('Welcome to CyberShop');
+    await expect(page.locator('body')).toContainText('Sandbox Mode');
   });
 
-  test('PayPal card is disabled with Coming Soon badge', async ({ page }) => {
+  test('renders all 6 products', async ({ page }) => {
     await page.goto('/');
 
-    const paypalCard = page.locator('.disabled-card');
-    await expect(paypalCard).toContainText('PayPal');
-    await expect(paypalCard).toContainText('Coming Soon');
+    const cards = page.locator('.product-card');
+    await expect(cards).toHaveCount(6);
   });
 
-  test('navbar shows sandbox indicator', async ({ page }) => {
+  test('can add a product to the cart', async ({ page }) => {
     await page.goto('/');
 
-    await expect(page.locator('nav')).toContainText('Sandbox');
-    await expect(page.locator('nav')).toContainText('testrest');
+    const firstAddBtn = page.locator('.product-card button').first();
+    await firstAddBtn.click();
+
+    const badge = page.locator('#cartBadge');
+    await expect(badge).toBeVisible();
+    await expect(badge).toContainText('1');
   });
 
-  const navTargets = [
-    { name: 'Credit Card', href: '/checkout/card', heading: 'Credit Card Payment' },
-    { name: 'Digital Wallets', href: '/checkout/wallet', heading: 'Digital Wallet Payment' },
-    { name: 'EFT / eCheck', href: '/checkout/eft', heading: 'EFT / eCheck Payment' },
-    { name: 'Tokenized Payments', href: '/checkout/token', heading: 'Tokenized Payments' },
-    { name: 'Invoices', href: '/checkout/invoice', heading: 'Invoice Management' },
-    { name: 'Payment Links', href: '/checkout/payment-link', heading: 'Create Payment Link' },
-  ];
+  test('navbar shows CyberShop brand and cart link', async ({ page }) => {
+    await page.goto('/');
 
-  for (const target of navTargets) {
-    test(`navigates to ${target.name} page`, async ({ page }) => {
+    await expect(page.locator('nav .navbar-brand')).toContainText('CyberShop');
+    await expect(page.locator('nav a[href="/cart"]')).toBeVisible();
+  });
+});
+
+test.describe('Cart Page', () => {
+  test('shows empty cart when no items', async ({ page }) => {
+    await page.goto('/cart');
+
+    await expect(page.locator('#emptyCart')).toBeVisible();
+  });
+
+  test('shows cart items after adding a product', async ({ page }) => {
+    await page.goto('/');
+
+    const firstAddBtn = page.locator('.product-card button').first();
+    await firstAddBtn.click();
+
+    await page.goto('/cart');
+
+    await expect(page.locator('#filledCart')).toBeVisible();
+    await expect(page.locator('#emptyCart')).not.toBeVisible();
+  });
+
+  test('displays all payment method buttons', async ({ page }) => {
+    await page.goto('/');
+    await page.locator('.product-card button').first().click();
+    await page.goto('/cart');
+
+    const payButtons = page.locator('.pay-method-btn');
+    await expect(payButtons).toHaveCount(6);
+
+    await expect(page.locator('body')).toContainText('Card Payment');
+    await expect(page.locator('body')).toContainText('Digital Wallet');
+    await expect(page.locator('body')).toContainText('Bank Transfer');
+    await expect(page.locator('body')).toContainText('Saved Card');
+    await expect(page.locator('body')).toContainText('Pay by Invoice');
+    await expect(page.locator('body')).toContainText('Payment Link');
+  });
+});
+
+test.describe('Checkout Wizard', () => {
+  const methods = ['card', 'wallet', 'eft', 'token', 'invoice', 'paymentLink'];
+
+  for (const method of methods) {
+    test(`loads checkout page for ${method}`, async ({ page }) => {
       await page.goto('/');
-      await page.locator(`a[href="${target.href}"]`).click();
-      await expect(page.locator('h2')).toContainText(target.heading);
+      await page.locator('.product-card button').first().click();
+      await page.goto(`/checkout?method=${method}`);
+
+      await expect(page.locator('.wiz-label')).toContainText('CONTACT DETAILS');
     });
   }
 });
