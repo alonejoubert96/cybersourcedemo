@@ -12,5 +12,5 @@ public class PaymentRequest {
     private String lastName;
     private String email;
     private double amount;
-    private String currency = "USD";
+    private String currency = "ZAR";
 }

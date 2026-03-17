@@ -27,7 +27,7 @@ public class TokenController {
     public ResponseEntity<PaymentResponse> payWithToken(@RequestBody Map<String, Object> body) {
         String customerId = (String) body.get("customerId");
         double amount = ((Number) body.getOrDefault("amount", 25.00)).doubleValue();
-        String currency = (String) body.getOrDefault("currency", "USD");
+        String currency = (String) body.getOrDefault("currency", "ZAR");
         return ResponseEntity.ok(tokenizedPaymentService.payWithToken(customerId, amount, currency));
     }
 }

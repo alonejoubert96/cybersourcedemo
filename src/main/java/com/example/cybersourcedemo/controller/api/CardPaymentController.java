@@ -31,7 +31,7 @@ public class CardPaymentController {
             @PathVariable String id,
             @RequestBody Map<String, Object> body) {
         double amount = ((Number) body.getOrDefault("amount", 25.00)).doubleValue();
-        String currency = (String) body.getOrDefault("currency", "USD");
+        String currency = (String) body.getOrDefault("currency", "ZAR");
         return ResponseEntity.ok(cardPaymentService.capture(id, amount, currency));
     }
 
@@ -40,7 +40,7 @@ public class CardPaymentController {
             @PathVariable String id,
             @RequestBody Map<String, Object> body) {
         double amount = ((Number) body.getOrDefault("amount", 25.00)).doubleValue();
-        String currency = (String) body.getOrDefault("currency", "USD");
+        String currency = (String) body.getOrDefault("currency", "ZAR");
         return ResponseEntity.ok(cardPaymentService.refund(id, amount, currency));
     }
 
