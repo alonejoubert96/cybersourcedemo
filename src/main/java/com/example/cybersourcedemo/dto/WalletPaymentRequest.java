@@ -9,5 +9,5 @@ public class WalletPaymentRequest {
     private String expirationMonth;
     private String expirationYear;
     private double amount;
-    private String currency = "USD";
+    private String currency = "ZAR";
 }

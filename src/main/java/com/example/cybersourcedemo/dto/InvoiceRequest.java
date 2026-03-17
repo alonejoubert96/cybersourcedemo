@@ -8,6 +8,6 @@ public class InvoiceRequest {
     private String customerName;
     private String description;
     private double amount;
-    private String currency = "USD";
+    private String currency = "ZAR";
     private String dueDate; // yyyy-MM-dd
 }

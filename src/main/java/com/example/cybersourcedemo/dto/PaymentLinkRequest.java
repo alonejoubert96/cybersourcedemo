@@ -6,5 +6,5 @@ import lombok.Data;
 public class PaymentLinkRequest {
     private String description;
     private double amount;
-    private String currency = "USD";
+    private String currency = "ZAR";
 }
