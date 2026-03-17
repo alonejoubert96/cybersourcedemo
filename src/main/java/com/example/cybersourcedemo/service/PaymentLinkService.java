@@ -27,12 +27,10 @@ public class PaymentLinkService {
 
             CreatePaymentLinkRequest linkRequest = new CreatePaymentLinkRequest();
 
-            // Processing info — linkType is required
             Iplv2paymentlinksProcessingInformation processingInfo = new Iplv2paymentlinksProcessingInformation();
             processingInfo.linkType("PURCHASE");
             linkRequest.processingInformation(processingInfo);
 
-            // Purchase info — purchaseNumber is required
             Iplv2paymentlinksPurchaseInformation purchaseInfo = new Iplv2paymentlinksPurchaseInformation();
             purchaseInfo.purchaseNumber("DEMO" + UUID.randomUUID().toString().replace("-", "").substring(0, 8));
             linkRequest.purchaseInformation(purchaseInfo);
@@ -43,7 +41,6 @@ public class PaymentLinkService {
             amountDetails.currency(request.getCurrency());
             orderInfo.amountDetails(amountDetails);
 
-            // At least 1 line item is required
             Iplv2paymentlinksOrderInformationLineItems lineItem = new Iplv2paymentlinksOrderInformationLineItems();
             lineItem.productName(request.getDescription());
             lineItem.productSku("LINK-001");

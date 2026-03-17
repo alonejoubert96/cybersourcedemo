@@ -88,6 +88,57 @@
         .scheme-icons .mini-apay { background: #333; }
         .scheme-icons .mini-spay { background: #1428a0; }
 
+        /* Wallet auth button */
+        .wallet-auth-btn { margin-top: 16px; font-weight: 600; font-size: 1rem; }
+        .wallet-auth-btn.google-pay { border-color: #4285F4; color: #4285F4; }
+        .wallet-auth-btn.google-pay:hover { background: #4285F4; color: #fff; }
+        .wallet-auth-btn.apple-pay { border-color: #333; color: #333; }
+        .wallet-auth-btn.apple-pay:hover { background: #333; color: #fff; }
+        .wallet-auth-btn.samsung-pay { border-color: #1428a0; color: #1428a0; }
+        .wallet-auth-btn.samsung-pay:hover { background: #1428a0; color: #fff; }
+
+        /* Wallet authentication modal overlay */
+        .wallet-modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,.5);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000; opacity: 0; transition: opacity .2s;
+        }
+        .wallet-modal-overlay.show { opacity: 1; }
+        .wallet-modal {
+            background: #fff; border-radius: 16px; width: 360px;
+            max-width: 90vw; overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,.3);
+            transform: translateY(20px); transition: transform .2s;
+        }
+        .wallet-modal-overlay.show .wallet-modal { transform: translateY(0); }
+        .wallet-modal-header {
+            padding: 20px 24px; color: #fff;
+            display: flex; align-items: center; gap: 12px;
+        }
+        .wallet-modal-body { padding: 24px; }
+        .wallet-modal-footer {
+            padding: 12px 24px; text-align: center;
+            border-top: 1px solid #eee;
+        }
+
+        /* Saved card selection */
+        .saved-card-option {
+            border: 2px solid #dee2e6; border-radius: 10px; padding: 14px 16px;
+            margin-bottom: 10px; cursor: pointer; transition: all .2s;
+        }
+        .saved-card-option:hover { border-color: #adb5bd; background: #fafafa; }
+        .saved-card-option.selected { border-color: var(--cs-primary); background: rgba(26,31,113,.03); }
+        .saved-card-radio {
+            width: 20px; height: 20px; border-radius: 50%;
+            border: 2px solid #adb5bd; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .saved-card-option.selected .saved-card-radio { border-color: var(--cs-primary); }
+        .saved-card-radio-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: var(--cs-primary);
+        }
+
         /* Cart: Delivery option buttons */
         .delivery-opt {
             border: 2px solid #dee2e6; border-radius: 8px; padding: 10px 24px;
