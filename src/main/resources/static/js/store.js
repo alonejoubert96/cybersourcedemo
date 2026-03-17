@@ -87,7 +87,34 @@ function maskEmail(email) {
 function maskCard(num) {
     if (!num) return '';
     var clean = num.replace(/\s/g, '');
-    return '.... ' + clean.slice(-4);
+    if (clean.length < 4) return '****';
+    return '**** **** **** ' + clean.slice(-4);
+}
+
+function maskPhone(phone) {
+    if (!phone || phone.length < 4) return phone || '';
+    return '***' + phone.slice(-4);
+}
+
+function detectCardBrand(num) {
+    var n = (num || '').replace(/\s/g, '');
+    if (/^4/.test(n)) return 'visa';
+    if (/^5[1-5]/.test(n) || /^2[2-7]/.test(n)) return 'mastercard';
+    if (/^3[47]/.test(n)) return 'amex';
+    if (/^6(?:011|5)/.test(n)) return 'discover';
+    return n.length > 0 ? 'unknown' : '';
+}
+
+function cardBrandHtml(brand) {
+    if (!brand) return '';
+    var labels = { visa: 'VISA', mastercard: 'MC', amex: 'AMEX', discover: 'DISC', unknown: '?' };
+    return '<span class="card-brand-badge ' + brand + '">' + (labels[brand] || '') + '</span>';
+}
+
+function updateCardBrand(inputId, targetId) {
+    var input = document.getElementById(inputId);
+    var target = document.getElementById(targetId);
+    if (input && target) target.innerHTML = cardBrandHtml(detectCardBrand(input.value));
 }
 
 function generateOrderNumber() { return 'CS-' + Date.now(); }
@@ -168,9 +195,10 @@ function goToCheckout(method) {
 var W = {
     method: 'card',
     step: 1,
-    contact: { email: 'customer@example.com', phone: '0821234567' },
+    contact: { email: '', phone: '' },
     payment: {},
-    billing: { firstName: 'Viktor', lastName: 'Vaughn', country: 'South Africa', address: '123 Main Street', apt: '', city: 'Cape Town', state: 'Western Cape', zip: '8001' },
+    billing: { firstName: '', lastName: '', country: 'South Africa', address: '', apt: '', city: '', state: '', zip: '' },
+    shipping: { firstName: '', lastName: '', country: 'South Africa', address: '', apt: '', city: '', state: '', zip: '' },
     shippingSame: true,
     savedCustomerId: null,
     apiResult: null
@@ -236,12 +264,12 @@ function renderContactForm() {
     return '<div class="wiz-card">'
         + '<div class="wiz-label">CONTACT DETAILS</div>'
         + '<div class="mb-3">'
-        + '<label class="wiz-field-label">Email</label>'
-        + '<input type="email" id="contactEmail" class="form-control wiz-input" value="' + esc(W.contact.email) + '">'
+        + '<label class="wiz-field-label">Email <span class="text-danger">*</span></label>'
+        + '<input type="email" id="contactEmail" class="form-control wiz-input" value="' + esc(W.contact.email) + '" placeholder="you@example.com" required>'
         + '</div>'
         + '<div class="mb-3">'
-        + '<label class="wiz-field-label">Phone number</label>'
-        + '<input type="tel" id="contactPhone" class="form-control wiz-input" value="' + esc(W.contact.phone) + '">'
+        + '<label class="wiz-field-label">Phone number <span class="text-danger">*</span></label>'
+        + '<input type="tel" id="contactPhone" class="form-control wiz-input" value="' + esc(W.contact.phone) + '" placeholder="e.g. 082 123 4567" required>'
         + '</div>'
         + '<div class="text-center mt-4">'
         + '<button class="wiz-btn" onclick="continueContact()">Continue</button>'
@@ -256,7 +284,7 @@ function renderContactSummary() {
         + '<a class="wiz-edit" onclick="editStep(1)">Edit</a>'
         + '</div>'
         + '<div class="mt-2" style="font-size:.95rem;">' + esc(maskEmail(W.contact.email)) + '</div>'
-        + '<div style="font-size:.95rem;">' + esc(W.contact.phone) + '</div>'
+        + '<div style="font-size:.95rem;">' + esc(maskPhone(W.contact.phone)) + '</div>'
         + '</div>';
 }
 
@@ -264,6 +292,7 @@ function continueContact() {
     var email = document.getElementById('contactEmail').value.trim();
     var phone = document.getElementById('contactPhone').value.trim();
     if (!email) { document.getElementById('contactEmail').focus(); return; }
+    if (!phone) { document.getElementById('contactPhone').focus(); return; }
     W.contact.email = email;
     W.contact.phone = phone;
     W.step = 2;
@@ -279,13 +308,19 @@ function renderPaymentForm() {
     if (W.method === 'card') {
         html += renderCardForm();
         html += renderBillingForm();
+        html += renderShippingForm();
     } else if (W.method === 'wallet') {
         html += renderWalletForm();
+        html += renderBillingForm();
+        html += renderShippingForm();
     } else if (W.method === 'eft') {
         html += renderEftForm();
         html += renderBillingForm();
+        html += renderShippingForm();
     } else if (W.method === 'token') {
         html += renderTokenForm();
+        html += renderBillingForm();
+        html += renderShippingForm();
     } else if (W.method === 'invoice') {
         html += renderInvoiceForm();
     } else if (W.method === 'paymentLink') {
@@ -304,50 +339,64 @@ function renderCardForm() {
     return '<div class="wiz-card">'
         + '<div class="wiz-label">PAYMENT DETAILS</div>'
         + '<div class="mb-3">'
-        + '<label class="wiz-field-label">Card number</label>'
+        + '<label class="wiz-field-label">Card number <span class="text-danger">*</span></label>'
         + '<div class="input-group">'
-        + '<input type="text" id="payCardNumber" class="form-control wiz-input" value="' + esc(pay.cardNumber || '4111111111111111') + '" placeholder="13 to 20 digits" maxlength="19">'
-        + '<span class="input-group-text"><i class="bi bi-credit-card-2-back"></i></span>'
+        + '<input type="text" id="payCardNumber" class="form-control wiz-input" value="' + esc(pay.cardNumber || '') + '" placeholder="Card number" maxlength="19" autocomplete="cc-number" oninput="updateCardBrand(\'payCardNumber\',\'cardBrandTag\')">'
+        + '<span class="input-group-text" id="cardBrandTag">' + (cardBrandHtml(detectCardBrand(pay.cardNumber || '')) || '<i class="bi bi-credit-card-2-back"></i>') + '</span>'
         + '</div></div>'
         + '<div class="row g-3 mb-3">'
         + '<div class="col-4"><label class="wiz-field-label">Expiry month</label>'
-        + '<select id="payExpMonth" class="form-select wiz-input">' + monthOptions(pay.expMonth || '12') + '</select></div>'
+        + '<select id="payExpMonth" class="form-select wiz-input">' + monthOptions(pay.expMonth || '') + '</select></div>'
         + '<div class="col-4"><label class="wiz-field-label">Expiry year</label>'
-        + '<select id="payExpYear" class="form-select wiz-input">' + yearOptions(pay.expYear || '2031') + '</select></div>'
-        + '<div class="col-4"><label class="wiz-field-label">Security code</label>'
-        + '<input type="text" id="payCvv" class="form-control wiz-input" value="' + esc(pay.cvv || '123') + '" maxlength="4">'
-        + '<div class="form-text" style="font-size:.75rem;">3 digits on back of card</div></div>'
+        + '<select id="payExpYear" class="form-select wiz-input">' + yearOptions(pay.expYear || '') + '</select></div>'
+        + '<div class="col-4"><label class="wiz-field-label">CVV <span class="text-danger">*</span></label>'
+        + '<input type="password" id="payCvv" class="form-control wiz-input" value="' + esc(pay.cvv || '') + '" maxlength="4" placeholder="***" autocomplete="cc-csc">'
+        + '<div class="form-text" style="font-size:.75rem;">3 or 4 digits</div></div>'
         + '</div>'
         + '<div class="row g-3 mb-2">'
-        + '<div class="col-6"><label class="wiz-field-label">First name</label>'
-        + '<input type="text" id="payFirstName" class="form-control wiz-input" value="' + esc(pay.firstName || W.billing.firstName) + '"></div>'
-        + '<div class="col-6"><label class="wiz-field-label">Last name</label>'
-        + '<input type="text" id="payLastName" class="form-control wiz-input" value="' + esc(pay.lastName || W.billing.lastName) + '"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">First name <span class="text-danger">*</span></label>'
+        + '<input type="text" id="payFirstName" class="form-control wiz-input" value="' + esc(pay.firstName || '') + '" placeholder="First name"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">Last name <span class="text-danger">*</span></label>'
+        + '<input type="text" id="payLastName" class="form-control wiz-input" value="' + esc(pay.lastName || '') + '" placeholder="Last name"></div>'
         + '</div></div>';
 }
 
 function renderWalletForm() {
     var pay = W.payment;
+    var sel = pay.walletType || 'GOOGLE_PAY';
     return '<div class="wiz-card">'
         + '<div class="wiz-label">WALLET DETAILS</div>'
-        + '<div class="mb-3"><label class="wiz-field-label">Wallet Provider</label>'
-        + '<select id="payWalletType" class="form-select wiz-input">'
-        + '<option value="GOOGLE_PAY"' + (pay.walletType === 'GOOGLE_PAY' ? ' selected' : '') + '>Google Pay</option>'
-        + '<option value="APPLE_PAY"' + (pay.walletType === 'APPLE_PAY' ? ' selected' : '') + '>Apple Pay</option>'
-        + '<option value="SAMSUNG_PAY"' + (pay.walletType === 'SAMSUNG_PAY' ? ' selected' : '') + '>Samsung Pay</option>'
-        + '</select></div>'
-        + '<div class="mb-3"><label class="wiz-field-label">Token Data (DPAN)</label>'
-        + '<input type="text" id="payWalletToken" class="form-control wiz-input" value="' + esc(pay.tokenData || '4111111111111111') + '">'
-        + '<div class="form-text">In production this comes from the wallet SDK.</div></div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Choose Wallet</label>'
+        + '<div class="wallet-tiles">'
+        + '<div class="wallet-tile google-pay' + (sel === 'GOOGLE_PAY' ? ' selected' : '') + '" onclick="selectWallet(\'GOOGLE_PAY\',this)">'
+        + '<span class="wallet-icon"><i class="bi bi-google"></i></span>Google Pay</div>'
+        + '<div class="wallet-tile apple-pay' + (sel === 'APPLE_PAY' ? ' selected' : '') + '" onclick="selectWallet(\'APPLE_PAY\',this)">'
+        + '<span class="wallet-icon"><i class="bi bi-apple"></i></span>Apple Pay</div>'
+        + '<div class="wallet-tile samsung-pay' + (sel === 'SAMSUNG_PAY' ? ' selected' : '') + '" onclick="selectWallet(\'SAMSUNG_PAY\',this)">'
+        + '<span class="wallet-icon"><i class="bi bi-phone"></i></span>Samsung Pay</div>'
+        + '</div>'
+        + '<input type="hidden" id="payWalletType" value="' + sel + '">'
+        + '</div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Card number <span class="text-danger">*</span></label>'
+        + '<div class="input-group">'
+        + '<input type="text" id="payWalletToken" class="form-control wiz-input" value="' + esc(pay.tokenData || '') + '" placeholder="Card number" maxlength="19" oninput="updateCardBrand(\'payWalletToken\',\'walletBrandTag\')">'
+        + '<span class="input-group-text" id="walletBrandTag">' + (cardBrandHtml(detectCardBrand(pay.tokenData || '')) || '<i class="bi bi-credit-card-2-back"></i>') + '</span>'
+        + '</div></div>'
         + '<div class="row g-3 mb-3">'
         + '<div class="col-6"><label class="wiz-field-label">Expiry month</label>'
-        + '<select id="payWalletExpMonth" class="form-select wiz-input">' + monthOptions(pay.expMonth || '12') + '</select></div>'
+        + '<select id="payWalletExpMonth" class="form-select wiz-input">' + monthOptions(pay.expMonth || '') + '</select></div>'
         + '<div class="col-6"><label class="wiz-field-label">Expiry year</label>'
-        + '<select id="payWalletExpYear" class="form-select wiz-input">' + yearOptions(pay.expYear || '2026') + '</select></div>'
+        + '<select id="payWalletExpYear" class="form-select wiz-input">' + yearOptions(pay.expYear || '') + '</select></div>'
         + '</div>'
-        + '<div class="mb-2"><label class="wiz-field-label">Cryptogram</label>'
-        + '<input type="text" id="payWalletCrypto" class="form-control wiz-input" value="' + esc(pay.cryptogram || 'EHuWW9PiBkWvqE5juRwDzAUFBAk=') + '"></div>'
         + '</div>';
+}
+
+function selectWallet(type, el) {
+    var tiles = el.parentNode.querySelectorAll('.wallet-tile');
+    for (var i = 0; i < tiles.length; i++) tiles[i].classList.remove('selected');
+    el.classList.add('selected');
+    document.getElementById('payWalletType').value = type;
+    W.payment.walletType = type;
 }
 
 function renderEftForm() {
@@ -355,10 +404,10 @@ function renderEftForm() {
     return '<div class="wiz-card">'
         + '<div class="wiz-label">BANK ACCOUNT DETAILS</div>'
         + '<div class="row g-3 mb-3">'
-        + '<div class="col-6"><label class="wiz-field-label">Routing Number (ABA)</label>'
-        + '<input type="text" id="payRouting" class="form-control wiz-input" value="' + esc(pay.routingNumber || '121042882') + '"></div>'
-        + '<div class="col-6"><label class="wiz-field-label">Account Number</label>'
-        + '<input type="text" id="payAccount" class="form-control wiz-input" value="' + esc(pay.accountNumber || '4100') + '"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">Routing Number (ABA) <span class="text-danger">*</span></label>'
+        + '<input type="text" id="payRouting" class="form-control wiz-input" value="' + esc(pay.routingNumber || '') + '" placeholder="9 digits"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">Account Number <span class="text-danger">*</span></label>'
+        + '<input type="text" id="payAccount" class="form-control wiz-input" value="' + esc(pay.accountNumber || '') + '" placeholder="Account number"></div>'
         + '</div>'
         + '<div class="mb-3"><label class="wiz-field-label">Account Type</label>'
         + '<select id="payAccountType" class="form-select wiz-input">'
@@ -366,10 +415,10 @@ function renderEftForm() {
         + '<option value="S"' + (pay.accountType === 'S' ? ' selected' : '') + '>Savings</option>'
         + '</select></div>'
         + '<div class="row g-3 mb-2">'
-        + '<div class="col-6"><label class="wiz-field-label">First name</label>'
-        + '<input type="text" id="payEftFirstName" class="form-control wiz-input" value="' + esc(pay.firstName || W.billing.firstName) + '"></div>'
-        + '<div class="col-6"><label class="wiz-field-label">Last name</label>'
-        + '<input type="text" id="payEftLastName" class="form-control wiz-input" value="' + esc(pay.lastName || W.billing.lastName) + '"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">First name <span class="text-danger">*</span></label>'
+        + '<input type="text" id="payEftFirstName" class="form-control wiz-input" value="' + esc(pay.firstName || '') + '" placeholder="First name"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">Last name <span class="text-danger">*</span></label>'
+        + '<input type="text" id="payEftLastName" class="form-control wiz-input" value="' + esc(pay.lastName || '') + '" placeholder="Last name"></div>'
         + '</div></div>';
 }
 
@@ -380,29 +429,35 @@ function renderTokenForm() {
             + '<div class="wiz-label">SAVED CARD</div>'
             + '<div class="d-flex align-items-center gap-3 py-2">'
             + '<i class="bi bi-check-circle-fill text-success fs-4"></i>'
-            + '<div><div class="fw-semibold">Card saved successfully</div>'
-            + '<div class="text-muted" style="font-size:.9rem;">Customer ID: <code>' + esc(W.savedCustomerId) + '</code></div></div>'
+            + '<div><div class="fw-semibold">Card saved</div>'
+            + '<div class="text-muted" style="font-size:.9rem;">' + maskCard(W.payment.cardNumber) + '</div></div>'
             + '</div></div>';
     }
     return '<div class="wiz-card">'
         + '<div class="wiz-label">SAVE YOUR CARD</div>'
         + '<p class="text-muted" style="font-size:.9rem;">Save your card details to skip this step next time.</p>'
-        + '<div class="mb-3"><label class="wiz-field-label">Card number</label>'
-        + '<input type="text" id="payTokenCard" class="form-control wiz-input" value="' + esc(pay.cardNumber || '4111111111111111') + '"></div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Card number <span class="text-danger">*</span></label>'
+        + '<div class="input-group">'
+        + '<input type="text" id="payTokenCard" class="form-control wiz-input" value="' + esc(pay.cardNumber || '') + '" placeholder="Card number" maxlength="19" autocomplete="cc-number" oninput="updateCardBrand(\'payTokenCard\',\'tokenBrandTag\')">'
+        + '<span class="input-group-text" id="tokenBrandTag">' + (cardBrandHtml(detectCardBrand(pay.cardNumber || '')) || '<i class="bi bi-credit-card-2-back"></i>') + '</span>'
+        + '</div></div>'
         + '<div class="row g-3 mb-3">'
-        + '<div class="col-6"><label class="wiz-field-label">Expiry month</label>'
-        + '<select id="payTokenExpMonth" class="form-select wiz-input">' + monthOptions(pay.expMonth || '12') + '</select></div>'
-        + '<div class="col-6"><label class="wiz-field-label">Expiry year</label>'
-        + '<select id="payTokenExpYear" class="form-select wiz-input">' + yearOptions(pay.expYear || '2031') + '</select></div>'
+        + '<div class="col-4"><label class="wiz-field-label">Expiry month</label>'
+        + '<select id="payTokenExpMonth" class="form-select wiz-input">' + monthOptions(pay.expMonth || '') + '</select></div>'
+        + '<div class="col-4"><label class="wiz-field-label">Expiry year</label>'
+        + '<select id="payTokenExpYear" class="form-select wiz-input">' + yearOptions(pay.expYear || '') + '</select></div>'
+        + '<div class="col-4"><label class="wiz-field-label">CVV</label>'
+        + '<input type="password" id="payTokenCvv" class="form-control wiz-input" value="' + esc(pay.cvv || '') + '" maxlength="4" placeholder="***" autocomplete="cc-csc">'
+        + '<div class="form-text" style="font-size:.75rem;">3 or 4 digits</div></div>'
         + '</div>'
         + '<div class="row g-3 mb-3">'
-        + '<div class="col-6"><label class="wiz-field-label">First name</label>'
-        + '<input type="text" id="payTokenFirstName" class="form-control wiz-input" value="' + esc(pay.firstName || W.billing.firstName) + '"></div>'
-        + '<div class="col-6"><label class="wiz-field-label">Last name</label>'
-        + '<input type="text" id="payTokenLastName" class="form-control wiz-input" value="' + esc(pay.lastName || W.billing.lastName) + '"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">First name <span class="text-danger">*</span></label>'
+        + '<input type="text" id="payTokenFirstName" class="form-control wiz-input" value="' + esc(pay.firstName || '') + '" placeholder="First name"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">Last name <span class="text-danger">*</span></label>'
+        + '<input type="text" id="payTokenLastName" class="form-control wiz-input" value="' + esc(pay.lastName || '') + '" placeholder="Last name"></div>'
         + '</div>'
         + '<button class="wiz-btn w-100" id="btnSaveCard" onclick="saveCardToken()">'
-        + '<i class="bi bi-shield-plus me-1"></i> Save Card Securely</button>'
+        + '<i class="bi bi-lock-fill me-1"></i> Save Card</button>'
         + '<div id="tokenError" class="mt-2"></div>'
         + '</div>';
 }
@@ -413,7 +468,7 @@ function renderInvoiceForm() {
     return '<div class="wiz-card">'
         + '<div class="wiz-label">INVOICE DETAILS</div>'
         + '<div class="mb-3"><label class="wiz-field-label">Description</label>'
-        + '<input type="text" id="payInvoiceDesc" class="form-control wiz-input" value="' + esc(pay.description || 'CyberShop order') + '"></div>'
+        + '<input type="text" id="payInvoiceDesc" class="form-control wiz-input" value="' + esc(pay.description || '') + '" placeholder="Order description"></div>'
         + '<div class="mb-2"><label class="wiz-field-label">Due Date</label>'
         + '<input type="date" id="payInvoiceDue" class="form-control wiz-input" value="' + esc(pay.dueDate || due.toISOString().split('T')[0]) + '"></div>'
         + '<div class="form-text">An invoice will be created and sent to your email.</div>'
@@ -425,52 +480,107 @@ function renderPaymentLinkForm() {
     return '<div class="wiz-card">'
         + '<div class="wiz-label">PAYMENT LINK DETAILS</div>'
         + '<div class="mb-2"><label class="wiz-field-label">Description</label>'
-        + '<input type="text" id="payLinkDesc" class="form-control wiz-input" value="' + esc(pay.description || 'CyberShop order') + '"></div>'
-        + '<div class="form-text">A shareable hosted payment URL will be generated.</div>'
+        + '<input type="text" id="payLinkDesc" class="form-control wiz-input" value="' + esc(pay.description || '') + '" placeholder="Payment description"></div>'
+        + '<div class="form-text">A hosted payment URL will be generated.</div>'
+        + '</div>';
+}
+
+function renderAddressForm(prefix, label, data) {
+    return '<div class="wiz-card mt-3">'
+        + '<div class="wiz-label">' + label + '</div>'
+        + '<div class="row g-3 mb-3">'
+        + '<div class="col-6"><label class="wiz-field-label">First name <span class="text-danger">*</span></label>'
+        + '<input type="text" id="' + prefix + 'FirstName" class="form-control wiz-input" value="' + esc(data.firstName) + '" placeholder="First name"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">Last name <span class="text-danger">*</span></label>'
+        + '<input type="text" id="' + prefix + 'LastName" class="form-control wiz-input" value="' + esc(data.lastName) + '" placeholder="Last name"></div>'
+        + '</div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Country</label>'
+        + '<select id="' + prefix + 'Country" class="form-select wiz-input">'
+        + '<option' + (data.country === 'South Africa' ? ' selected' : '') + '>South Africa</option>'
+        + '<option' + (data.country === 'USA' ? ' selected' : '') + '>USA</option>'
+        + '<option' + (data.country === 'United Kingdom' ? ' selected' : '') + '>United Kingdom</option>'
+        + '</select></div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Address <span class="text-danger">*</span></label>'
+        + '<input type="text" id="' + prefix + 'Address" class="form-control wiz-input" value="' + esc(data.address) + '" placeholder="Street address"></div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Apartment, suite, floor etc</label>'
+        + '<input type="text" id="' + prefix + 'Apt" class="form-control wiz-input" value="' + esc(data.apt) + '" placeholder="Optional"></div>'
+        + '<div class="row g-3 mb-3">'
+        + '<div class="col-6"><label class="wiz-field-label">City <span class="text-danger">*</span></label>'
+        + '<input type="text" id="' + prefix + 'City" class="form-control wiz-input" value="' + esc(data.city) + '" placeholder="City"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">State / Province <span class="text-danger">*</span></label>'
+        + '<select id="' + prefix + 'State" class="form-select wiz-input">' + provinceOptions(data.state) + '</select></div>'
+        + '</div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Postal Code <span class="text-danger">*</span></label>'
+        + '<input type="text" id="' + prefix + 'Zip" class="form-control wiz-input" value="' + esc(data.zip) + '" placeholder="Postal code"></div>'
         + '</div>';
 }
 
 function renderBillingForm() {
-    var b = W.billing;
+    return renderAddressForm('billing', 'BILLING ADDRESS', W.billing);
+}
+
+function renderShippingForm() {
     return '<div class="wiz-card mt-3">'
-        + '<div class="wiz-label">BILLING ADDRESS</div>'
-        + '<div class="mb-3"><label class="wiz-field-label">Country</label>'
-        + '<select id="billingCountry" class="form-select wiz-input">'
-        + '<option' + (b.country === 'South Africa' ? ' selected' : '') + '>South Africa</option>'
-        + '<option' + (b.country === 'USA' ? ' selected' : '') + '>USA</option>'
-        + '<option' + (b.country === 'United Kingdom' ? ' selected' : '') + '>United Kingdom</option>'
-        + '</select></div>'
-        + '<div class="mb-3"><label class="wiz-field-label">Address</label>'
-        + '<input type="text" id="billingAddress" class="form-control wiz-input" value="' + esc(b.address) + '"></div>'
-        + '<div class="mb-3"><label class="wiz-field-label">Apartment, suite, floor etc</label>'
-        + '<input type="text" id="billingApt" class="form-control wiz-input" value="' + esc(b.apt) + '"></div>'
-        + '<div class="row g-3 mb-3">'
-        + '<div class="col-6"><label class="wiz-field-label">City</label>'
-        + '<input type="text" id="billingCity" class="form-control wiz-input" value="' + esc(b.city) + '"></div>'
-        + '<div class="col-6"><label class="wiz-field-label">State / Province</label>'
-        + '<select id="billingState" class="form-select wiz-input">' + provinceOptions(b.state) + '</select></div>'
+        + '<div class="d-flex justify-content-between align-items-center">'
+        + '<div class="wiz-label mb-0">SHIPPING ADDRESS</div>'
         + '</div>'
-        + '<div class="mb-3"><label class="wiz-field-label">Zip Code</label>'
-        + '<input type="text" id="billingZip" class="form-control wiz-input" value="' + esc(b.zip) + '"></div>'
-        + '<div class="form-check">'
-        + '<input class="form-check-input" type="checkbox" id="shippingSame"' + (W.shippingSame ? ' checked' : '') + '>'
-        + '<label class="form-check-label" for="shippingSame">Shipping address is same as billing</label>'
+        + '<div class="form-check mt-2 mb-3">'
+        + '<input class="form-check-input" type="checkbox" id="shippingSame"' + (W.shippingSame ? ' checked' : '') + ' onchange="toggleShipping()">'
+        + '<label class="form-check-label" for="shippingSame">Same as billing address</label>'
+        + '</div>'
+        + '<div id="shippingFields" style="' + (W.shippingSame ? 'display:none' : '') + '">'
+        + renderAddressFields('shipping', W.shipping)
         + '</div></div>';
+}
+
+function renderAddressFields(prefix, data) {
+    return '<div class="row g-3 mb-3">'
+        + '<div class="col-6"><label class="wiz-field-label">First name <span class="text-danger">*</span></label>'
+        + '<input type="text" id="' + prefix + 'FirstName" class="form-control wiz-input" value="' + esc(data.firstName) + '" placeholder="First name"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">Last name <span class="text-danger">*</span></label>'
+        + '<input type="text" id="' + prefix + 'LastName" class="form-control wiz-input" value="' + esc(data.lastName) + '" placeholder="Last name"></div>'
+        + '</div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Country</label>'
+        + '<select id="' + prefix + 'Country" class="form-select wiz-input">'
+        + '<option' + (data.country === 'South Africa' ? ' selected' : '') + '>South Africa</option>'
+        + '<option' + (data.country === 'USA' ? ' selected' : '') + '>USA</option>'
+        + '<option' + (data.country === 'United Kingdom' ? ' selected' : '') + '>United Kingdom</option>'
+        + '</select></div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Address <span class="text-danger">*</span></label>'
+        + '<input type="text" id="' + prefix + 'Address" class="form-control wiz-input" value="' + esc(data.address) + '" placeholder="Street address"></div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Apartment, suite, floor etc</label>'
+        + '<input type="text" id="' + prefix + 'Apt" class="form-control wiz-input" value="' + esc(data.apt) + '" placeholder="Optional"></div>'
+        + '<div class="row g-3 mb-3">'
+        + '<div class="col-6"><label class="wiz-field-label">City <span class="text-danger">*</span></label>'
+        + '<input type="text" id="' + prefix + 'City" class="form-control wiz-input" value="' + esc(data.city) + '" placeholder="City"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">State / Province <span class="text-danger">*</span></label>'
+        + '<select id="' + prefix + 'State" class="form-select wiz-input">' + provinceOptions(data.state) + '</select></div>'
+        + '</div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Postal Code <span class="text-danger">*</span></label>'
+        + '<input type="text" id="' + prefix + 'Zip" class="form-control wiz-input" value="' + esc(data.zip) + '" placeholder="Postal code"></div>';
+}
+
+function toggleShipping() {
+    var same = document.getElementById('shippingSame').checked;
+    document.getElementById('shippingFields').style.display = same ? 'none' : '';
 }
 
 function renderPaymentSummary() {
     var summary = '';
     if (W.method === 'card') {
-        summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-credit-card-2-front fs-5"></i> <span>' + maskCard(W.payment.cardNumber) + '</span></div>';
+        var cardBrand = cardBrandHtml(detectCardBrand(W.payment.cardNumber));
+        summary = '<div class="d-flex align-items-center gap-2">' + (cardBrand || '<i class="bi bi-credit-card-2-front fs-5"></i>') + ' <span>' + maskCard(W.payment.cardNumber) + '</span></div>';
     } else if (W.method === 'wallet') {
         var wNames = { GOOGLE_PAY: 'Google Pay', APPLE_PAY: 'Apple Pay', SAMSUNG_PAY: 'Samsung Pay' };
-        summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-wallet2 fs-5"></i> <span>' + (wNames[W.payment.walletType] || 'Wallet') + '</span></div>';
+        var walletBrand = cardBrandHtml(detectCardBrand(W.payment.tokenData));
+        summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-wallet2 fs-5"></i> <span>' + (wNames[W.payment.walletType] || 'Wallet') + ' — ' + maskCard(W.payment.tokenData) + '</span> ' + walletBrand + '</div>';
     } else if (W.method === 'eft') {
         summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-bank fs-5"></i> <span>Account ending in ' + (W.payment.accountNumber || '').slice(-4) + '</span></div>';
     } else if (W.method === 'token') {
-        summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-shield-check fs-5"></i> <span>Saved card &mdash; ' + maskCard(W.payment.cardNumber) + '</span></div>';
+        var tokenBrand = cardBrandHtml(detectCardBrand(W.payment.cardNumber));
+        summary = '<div class="d-flex align-items-center gap-2">' + (tokenBrand || '<i class="bi bi-shield-check fs-5"></i>') + ' <span>Saved card — ' + maskCard(W.payment.cardNumber) + '</span></div>';
     } else if (W.method === 'invoice') {
-        summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-receipt fs-5"></i> <span>Invoice &mdash; ' + esc(W.payment.description) + '</span></div>';
+        summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-receipt fs-5"></i> <span>Invoice</span></div>';
     } else if (W.method === 'paymentLink') {
         summary = '<div class="d-flex align-items-center gap-2"><i class="bi bi-link-45deg fs-5"></i> <span>Payment Link</span></div>';
     }
@@ -481,16 +591,29 @@ function renderPaymentSummary() {
         + '<a class="wiz-edit" onclick="editStep(2)">Edit</a></div>'
         + '<div class="mt-2">' + summary + '</div></div>';
 
-    if (W.method === 'card' || W.method === 'eft') {
+    // billing summary
+    if (W.method === 'card' || W.method === 'eft' || W.method === 'wallet' || W.method === 'token') {
         var b = W.billing;
         html += '<div class="wiz-card wiz-summary">'
             + '<div class="d-flex justify-content-between align-items-start">'
-            + '<div class="wiz-label mb-0">SHIP TO</div>'
+            + '<div class="wiz-label mb-0">BILLING ADDRESS</div>'
             + '<a class="wiz-edit" onclick="editStep(2)">Edit</a></div>'
             + '<div class="mt-2" style="font-size:.95rem;">'
             + esc(b.firstName) + ' ' + esc(b.lastName) + '<br>'
             + esc(b.address) + (b.apt ? ', ' + esc(b.apt) : '') + '<br>'
             + esc(b.city) + ', ' + esc(b.state) + ' ' + esc(b.zip)
+            + '</div></div>';
+
+        var s = W.shippingSame ? b : W.shipping;
+        html += '<div class="wiz-card wiz-summary">'
+            + '<div class="d-flex justify-content-between align-items-start">'
+            + '<div class="wiz-label mb-0">SHIPPING ADDRESS</div>'
+            + '<a class="wiz-edit" onclick="editStep(2)">Edit</a></div>'
+            + '<div class="mt-2" style="font-size:.95rem;">'
+            + (W.shippingSame ? '<span class="text-muted">Same as billing</span>' :
+                esc(s.firstName) + ' ' + esc(s.lastName) + '<br>'
+                + esc(s.address) + (s.apt ? ', ' + esc(s.apt) : '') + '<br>'
+                + esc(s.city) + ', ' + esc(s.state) + ' ' + esc(s.zip))
             + '</div></div>';
     }
 
@@ -499,44 +622,70 @@ function renderPaymentSummary() {
 
 // save step 2 data
 
+function saveAddressFromForm(prefix) {
+    return {
+        firstName: document.getElementById(prefix + 'FirstName').value.trim(),
+        lastName: document.getElementById(prefix + 'LastName').value.trim(),
+        country: document.getElementById(prefix + 'Country').value,
+        address: document.getElementById(prefix + 'Address').value.trim(),
+        apt: document.getElementById(prefix + 'Apt').value.trim(),
+        city: document.getElementById(prefix + 'City').value.trim(),
+        state: document.getElementById(prefix + 'State').value,
+        zip: document.getElementById(prefix + 'Zip').value.trim()
+    };
+}
+
 function continuePayment() {
     if (W.method === 'card') {
+        var cn = document.getElementById('payCardNumber').value.trim();
+        if (!cn) { document.getElementById('payCardNumber').focus(); return; }
         W.payment = {
-            cardNumber: document.getElementById('payCardNumber').value,
+            cardNumber: cn,
             expMonth: document.getElementById('payExpMonth').value,
             expYear: document.getElementById('payExpYear').value,
             cvv: document.getElementById('payCvv').value,
-            firstName: document.getElementById('payFirstName').value,
-            lastName: document.getElementById('payLastName').value
+            firstName: document.getElementById('payFirstName').value.trim(),
+            lastName: document.getElementById('payLastName').value.trim()
         };
-        saveBillingFromForm();
+        W.billing = saveAddressFromForm('billing');
+        W.shippingSame = document.getElementById('shippingSame').checked;
+        if (!W.shippingSame) W.shipping = saveAddressFromForm('shipping');
     } else if (W.method === 'wallet') {
+        var wt = document.getElementById('payWalletToken').value.trim();
+        if (!wt) { document.getElementById('payWalletToken').focus(); return; }
         W.payment = {
             walletType: document.getElementById('payWalletType').value,
-            tokenData: document.getElementById('payWalletToken').value,
+            tokenData: wt,
             expMonth: document.getElementById('payWalletExpMonth').value,
-            expYear: document.getElementById('payWalletExpYear').value,
-            cryptogram: document.getElementById('payWalletCrypto').value
+            expYear: document.getElementById('payWalletExpYear').value
         };
+        W.billing = saveAddressFromForm('billing');
+        W.shippingSame = document.getElementById('shippingSame').checked;
+        if (!W.shippingSame) W.shipping = saveAddressFromForm('shipping');
     } else if (W.method === 'eft') {
         W.payment = {
-            routingNumber: document.getElementById('payRouting').value,
-            accountNumber: document.getElementById('payAccount').value,
+            routingNumber: document.getElementById('payRouting').value.trim(),
+            accountNumber: document.getElementById('payAccount').value.trim(),
             accountType: document.getElementById('payAccountType').value,
-            firstName: document.getElementById('payEftFirstName').value,
-            lastName: document.getElementById('payEftLastName').value
+            firstName: document.getElementById('payEftFirstName').value.trim(),
+            lastName: document.getElementById('payEftLastName').value.trim()
         };
-        saveBillingFromForm();
+        W.billing = saveAddressFromForm('billing');
+        W.shippingSame = document.getElementById('shippingSame').checked;
+        if (!W.shippingSame) W.shipping = saveAddressFromForm('shipping');
     } else if (W.method === 'token') {
-        if (!W.savedCustomerId) { return; } // Must save card first
+        if (!W.savedCustomerId) { return; }
+        W.billing = saveAddressFromForm('billing');
+        W.shippingSame = document.getElementById('shippingSame').checked;
+        if (!W.shippingSame) W.shipping = saveAddressFromForm('shipping');
     } else if (W.method === 'invoice') {
         W.payment = {
-            description: document.getElementById('payInvoiceDesc').value,
+            description: document.getElementById('payInvoiceDesc').value.trim(),
             dueDate: document.getElementById('payInvoiceDue').value
         };
     } else if (W.method === 'paymentLink') {
         W.payment = {
-            description: document.getElementById('payLinkDesc').value
+            description: document.getElementById('payLinkDesc').value.trim()
         };
     }
 
@@ -545,50 +694,39 @@ function continuePayment() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function saveBillingFromForm() {
-    W.billing.country = document.getElementById('billingCountry').value;
-    W.billing.address = document.getElementById('billingAddress').value;
-    W.billing.apt = document.getElementById('billingApt').value;
-    W.billing.city = document.getElementById('billingCity').value;
-    W.billing.state = document.getElementById('billingState').value;
-    W.billing.zip = document.getElementById('billingZip').value;
-    W.shippingSame = document.getElementById('shippingSame').checked;
-    if (W.method === 'card') {
-        W.billing.firstName = W.payment.firstName;
-        W.billing.lastName = W.payment.lastName;
-    } else if (W.method === 'eft') {
-        W.billing.firstName = W.payment.firstName;
-        W.billing.lastName = W.payment.lastName;
-    }
-}
-
 function saveCardToken() {
     var btn = document.getElementById('btnSaveCard');
+    var cn = document.getElementById('payTokenCard').value.trim();
+    if (!cn) { document.getElementById('payTokenCard').focus(); return; }
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving card...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
 
+    var cvv = document.getElementById('payTokenCvv') ? document.getElementById('payTokenCvv').value.trim() : '';
     W.payment = {
-        cardNumber: document.getElementById('payTokenCard').value,
+        cardNumber: cn,
         expMonth: document.getElementById('payTokenExpMonth').value,
         expYear: document.getElementById('payTokenExpYear').value,
-        firstName: document.getElementById('payTokenFirstName').value,
-        lastName: document.getElementById('payTokenLastName').value
+        cvv: cvv,
+        firstName: document.getElementById('payTokenFirstName').value.trim(),
+        lastName: document.getElementById('payTokenLastName').value.trim()
     };
 
-    callApi('/api/tokens/customers', 'POST', {
+    var body = {
         cardNumber: W.payment.cardNumber,
         expirationMonth: W.payment.expMonth,
         expirationYear: W.payment.expYear,
         firstName: W.payment.firstName,
         lastName: W.payment.lastName,
         email: W.contact.email
-    }).then(function(result) {
+    };
+    if (cvv) body.securityCode = cvv;
+    callApi('/api/tokens/customers', 'POST', body).then(function(result) {
         if (result.ok && result.data.transactionId) {
             W.savedCustomerId = result.data.transactionId;
             renderWizard();
         } else {
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-shield-plus me-1"></i> Save Card Securely';
+            btn.innerHTML = '<i class="bi bi-lock-fill me-1"></i> Save Card';
             document.getElementById('tokenError').innerHTML =
                 '<div class="alert alert-danger py-2 small">' + esc(result.data.message || 'Failed to save card') + '</div>';
         }
@@ -608,7 +746,7 @@ function renderReview() {
 
     html += '<div class="wiz-card">'
         + '<div class="wiz-label">CONFIRM</div>'
-        + '<p class="text-center text-muted mb-3">Please review and confirm your payment information before you continue.</p>'
+        + '<p class="text-center text-muted mb-3">Please review your details before continuing.</p>'
         + '<button class="wiz-btn w-100" id="confirmBtn" onclick="submitPayment()">'
         + '<i class="bi bi-lock-fill me-2"></i>' + esc(METHOD_LABELS[W.method] || 'Pay Now')
         + '</button></div>';
@@ -643,12 +781,11 @@ function submitPayment() {
             tokenData: W.payment.tokenData,
             expirationMonth: W.payment.expMonth,
             expirationYear: W.payment.expYear,
-            cryptogram: W.payment.cryptogram,
+            cryptogram: 'none',
             amount: parseFloat(total.toFixed(2)),
             currency: 'ZAR'
         });
     } else if (W.method === 'eft') {
-        // ACH/eCheck is US-only — sandbox requires USD
         promise = callApi('/api/payments/eft', 'POST', {
             routingNumber: W.payment.routingNumber,
             accountNumber: W.payment.accountNumber,
@@ -694,7 +831,15 @@ function submitPayment() {
         });
     }
 
+    // clear sensitive data from memory after submitting
+    var cardNum = W.payment.cardNumber;
+    var cvv = W.payment.cvv;
+
     promise.then(function(result) {
+        // wipe PAN and CVV from state immediately
+        if (W.payment.cardNumber) W.payment.cardNumber = maskCard(cardNum);
+        delete W.payment.cvv;
+
         if (result.ok) {
             W.apiResult = result.data;
             showConfirmation();
@@ -747,24 +892,22 @@ function showConfirmation() {
         + '<div class="text-muted small">Total: <span class="text-dark fw-semibold">' + fmt(getTotal()) + '</span></div>'
         + '</div>';
 
+    var shipAddr = W.shippingSame ? W.billing : W.shipping;
     html += '<div class="col-md-4">'
         + '<h6 class="fw-bold">Shipping Address</h6>'
-        + '<div class="text-muted small">Type: <span class="text-dark">Standard</span></div>'
-        + '<div class="text-muted small">Tracking Number: <span class="text-dark">' + trackingNum + '</span></div>'
+        + '<div class="text-muted small">' + esc(shipAddr.firstName) + ' ' + esc(shipAddr.lastName) + '</div>'
+        + '<div class="text-muted small">' + esc(shipAddr.address) + '</div>'
+        + '<div class="text-muted small">' + esc(shipAddr.city) + ', ' + esc(shipAddr.state) + ' ' + esc(shipAddr.zip) + '</div>'
+        + '<div class="text-muted small mt-1">Tracking: <span class="text-dark">' + trackingNum + '</span></div>'
         + '</div>';
 
     html += '<div class="col-md-4">'
-        + '<h6 class="fw-bold">Payment Information</h6>'
+        + '<h6 class="fw-bold">Payment</h6>'
         + '<div class="text-muted small">Status: <span class="text-success fw-semibold">' + esc(data.status || 'AUTHORIZED') + '</span></div>';
     if (data.transactionId) {
-        html += '<div class="text-muted small">Transaction Reference #: <span class="text-dark">' + esc(data.transactionId) + '</span></div>';
+        html += '<div class="text-muted small">Reference: <span class="text-dark">' + esc(data.transactionId) + '</span></div>';
     }
-    if (data.details) {
-        var entries = Object.entries(data.details).filter(function(e) { return e[1] !== null && e[1] !== ''; });
-        for (var i = 0; i < entries.length; i++) {
-            html += '<div class="text-muted small">' + esc(entries[i][0]) + ': <span class="text-dark">' + esc(String(entries[i][1])) + '</span></div>';
-        }
-    }
+    html += '<div class="text-muted small">Method: <span class="text-dark">' + esc(METHOD_LABELS[W.method] || W.method) + '</span></div>';
     html += '</div></div>';
 
     html += '<hr class="my-4">';
@@ -778,7 +921,7 @@ function showConfirmation() {
 // form helpers
 
 function monthOptions(selected) {
-    var html = '';
+    var html = '<option value="">Month</option>';
     for (var m = 1; m <= 12; m++) {
         var val = (m < 10 ? '0' : '') + m;
         html += '<option value="' + val + '"' + (val === selected ? ' selected' : '') + '>' + val + '</option>';
@@ -787,7 +930,7 @@ function monthOptions(selected) {
 }
 
 function yearOptions(selected) {
-    var html = '';
+    var html = '<option value="">Year</option>';
     var now = new Date().getFullYear();
     for (var y = now; y <= now + 15; y++) {
         html += '<option value="' + y + '"' + ('' + y === selected ? ' selected' : '') + '>' + y + '</option>';
@@ -797,7 +940,7 @@ function yearOptions(selected) {
 
 function provinceOptions(selected) {
     var provinces = ['Eastern Cape','Free State','Gauteng','KwaZulu-Natal','Limpopo','Mpumalanga','North West','Northern Cape','Western Cape'];
-    var html = '';
+    var html = '<option value="">Select province</option>';
     for (var i = 0; i < provinces.length; i++) {
         html += '<option' + (provinces[i] === selected ? ' selected' : '') + '>' + provinces[i] + '</option>';
     }
