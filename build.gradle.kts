@@ -27,6 +27,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web")
     implementation("org.springframework.boot:spring-boot-starter-thymeleaf")
     implementation("com.cybersource:cybersource-rest-client-java:0.0.86")
+    implementation("commons-codec:commons-codec:1.15")
+    implementation("com.auth0:java-jwt:4.2.1")
 
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

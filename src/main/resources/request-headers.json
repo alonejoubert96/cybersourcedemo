@@ -1,0 +1,1 @@
+{"v-c-merchant-id":"testMerchantId","v-c-date":"Mon, 23 Mar 2026 09:18:02 GMT","Digest":"SHA-256=Lj++O+Y2josJM3fL/GrTod7h9uL7Wg/L1PNIuGBq0MY=","Signature":"keyid=\"null\", algorithm=\"HmacSHA256\", headers=\"host v-c-date request-target digest v-c-merchant-id\", signature=\"KQrmiL1VT/0ETpcAWXY/jLOdf/G2BQd5Y05A8wWJlFo=\"","Host":null,"Content-Type":"application/json"}

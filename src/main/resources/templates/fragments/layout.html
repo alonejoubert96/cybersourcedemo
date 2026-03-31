@@ -44,101 +44,6 @@
         .confirmation-icon { font-size: 4rem; color: #198754; }
         .result-box { display: none; }
 
-        /* Card brand badges */
-        .card-brand-badge {
-            display: inline-flex; align-items: center; justify-content: center;
-            font-size: 0.7rem; font-weight: 700; letter-spacing: .5px;
-            padding: 2px 8px; border-radius: 4px; color: #fff; vertical-align: middle;
-        }
-        .card-brand-badge.visa { background: #1a1f71; }
-        .card-brand-badge.mastercard { background: linear-gradient(135deg, #eb001b, #f79e1b); }
-        .card-brand-badge.amex { background: #2e77bc; }
-        .card-brand-badge.discover { background: #ff6600; }
-        .card-brand-badge.unknown { background: #6c757d; }
-
-        /* Wallet tile buttons */
-        .wallet-tiles { display: flex; gap: 12px; flex-wrap: wrap; }
-        .wallet-tile {
-            flex: 1; min-width: 100px; padding: 16px 12px; border-radius: 10px;
-            border: 2px solid #dee2e6; background: #fff; cursor: pointer;
-            text-align: center; font-weight: 600; font-size: .85rem;
-            transition: all .2s; display: flex; flex-direction: column;
-            align-items: center; gap: 8px;
-        }
-        .wallet-tile:hover { border-color: #adb5bd; transform: translateY(-2px); }
-        .wallet-tile.selected { border-width: 3px; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.1); }
-        .wallet-tile.google-pay.selected { border-color: #4285F4; background: #f0f4ff; }
-        .wallet-tile.apple-pay.selected { border-color: #333; background: #f5f5f5; }
-        .wallet-tile.samsung-pay.selected { border-color: #1428a0; background: #eef0ff; }
-        .wallet-tile .wallet-icon { font-size: 1.5rem; }
-        .wallet-tile.google-pay .wallet-icon { color: #4285F4; }
-        .wallet-tile.apple-pay .wallet-icon { color: #333; }
-        .wallet-tile.samsung-pay .wallet-icon { color: #1428a0; }
-
-        /* Small card scheme icons on cart buttons */
-        .scheme-icons { display: inline-flex; gap: 4px; margin-left: 8px; }
-        .scheme-icons .mini-badge {
-            font-size: 0.55rem; font-weight: 700; padding: 1px 5px;
-            border-radius: 3px; color: #fff; letter-spacing: .3px;
-        }
-        .scheme-icons .mini-visa { background: #1a1f71; }
-        .scheme-icons .mini-mc { background: linear-gradient(135deg, #eb001b, #f79e1b); }
-        .scheme-icons .mini-amex { background: #2e77bc; }
-        .scheme-icons .mini-gpay { background: #4285F4; }
-        .scheme-icons .mini-apay { background: #333; }
-        .scheme-icons .mini-spay { background: #1428a0; }
-
-        /* Wallet auth button */
-        .wallet-auth-btn { margin-top: 16px; font-weight: 600; font-size: 1rem; }
-        .wallet-auth-btn.google-pay { border-color: #4285F4; color: #4285F4; }
-        .wallet-auth-btn.google-pay:hover { background: #4285F4; color: #fff; }
-        .wallet-auth-btn.apple-pay { border-color: #333; color: #333; }
-        .wallet-auth-btn.apple-pay:hover { background: #333; color: #fff; }
-        .wallet-auth-btn.samsung-pay { border-color: #1428a0; color: #1428a0; }
-        .wallet-auth-btn.samsung-pay:hover { background: #1428a0; color: #fff; }
-
-        /* Wallet authentication modal overlay */
-        .wallet-modal-overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,.5);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 2000; opacity: 0; transition: opacity .2s;
-        }
-        .wallet-modal-overlay.show { opacity: 1; }
-        .wallet-modal {
-            background: #fff; border-radius: 16px; width: 360px;
-            max-width: 90vw; overflow: hidden;
-            box-shadow: 0 20px 60px rgba(0,0,0,.3);
-            transform: translateY(20px); transition: transform .2s;
-        }
-        .wallet-modal-overlay.show .wallet-modal { transform: translateY(0); }
-        .wallet-modal-header {
-            padding: 20px 24px; color: #fff;
-            display: flex; align-items: center; gap: 12px;
-        }
-        .wallet-modal-body { padding: 24px; }
-        .wallet-modal-footer {
-            padding: 12px 24px; text-align: center;
-            border-top: 1px solid #eee;
-        }
-
-        /* Saved card selection */
-        .saved-card-option {
-            border: 2px solid #dee2e6; border-radius: 10px; padding: 14px 16px;
-            margin-bottom: 10px; cursor: pointer; transition: all .2s;
-        }
-        .saved-card-option:hover { border-color: #adb5bd; background: #fafafa; }
-        .saved-card-option.selected { border-color: var(--cs-primary); background: rgba(26,31,113,.03); }
-        .saved-card-radio {
-            width: 20px; height: 20px; border-radius: 50%;
-            border: 2px solid #adb5bd; flex-shrink: 0;
-            display: flex; align-items: center; justify-content: center;
-        }
-        .saved-card-option.selected .saved-card-radio { border-color: var(--cs-primary); }
-        .saved-card-radio-dot {
-            width: 10px; height: 10px; border-radius: 50%;
-            background: var(--cs-primary);
-        }
-
         /* Cart: Delivery option buttons */
         .delivery-opt {
             border: 2px solid #dee2e6; border-radius: 8px; padding: 10px 24px;
@@ -181,6 +86,60 @@
         }
         .wiz-btn:hover { background: #f5f5f5; }
         .wiz-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+        /* Payment method list */
+        .payment-method-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .payment-method-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: all .15s;
+            background: #fff;
+        }
+        .payment-method-item:hover {
+            border-color: var(--cs-primary);
+            background: rgba(26, 31, 113, .03);
+        }
+        .payment-method-item .method-icon {
+            font-size: 1.4rem;
+            color: var(--cs-primary);
+            width: 32px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .payment-method-item .method-label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #333;
+        }
+        .payment-method-item .method-chevron {
+            margin-left: auto;
+            color: #adb5bd;
+            font-size: 1rem;
+        }
+
+        /* Payment sidebar */
+        #paymentSidebar { width: 480px; max-width: 90vw; }
+        #paymentSidebar .offcanvas-header {
+            background: var(--cs-primary);
+            color: #fff;
+        }
+        #paymentSidebar .offcanvas-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+        #paymentSidebar .offcanvas-body { padding: 24px; }
+
+        @media (max-width: 480px) {
+            #paymentSidebar { width: 100vw; }
+        }
     </style>
 </head>
 <body>

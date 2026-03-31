@@ -1,28 +1,55 @@
 package com.example.cybersourcedemo.controller.ui;
 
-import com.example.cybersourcedemo.dto.*;
-import com.example.cybersourcedemo.exception.PaymentException;
-import com.example.cybersourcedemo.service.*;
-import lombok.RequiredArgsConstructor;
+import com.example.cybersourcedemo.model.RequestData;
+import com.example.cybersourcedemo.service.CaptureContextService;
+import com.example.cybersourcedemo.service.JwtProcessorService;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.annotation.PostConstruct;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
 
 @Controller
-@RequiredArgsConstructor
 public class CheckoutUiController {
 
-    private final CardPaymentService cardPaymentService;
-    private final WalletPaymentService walletPaymentService;
-    private final EftPaymentService eftPaymentService;
-    private final TokenService tokenService;
-    private final TokenizedPaymentService tokenizedPaymentService;
-    private final InvoiceService invoiceService;
-    private final PaymentLinkService paymentLinkService;
+    private final CaptureContextService captureContextService;
+    private final JwtProcessorService jwtProcessorService;
+    private final ObjectMapper objectMapper;
 
-    // ── Store pages ──
+    private RequestData requestData;
+    private JsonNode payloadJson;
+
+    @Autowired
+    public CheckoutUiController(CaptureContextService captureContextService,
+                                JwtProcessorService jwtProcessorService) {
+        this.captureContextService = captureContextService;
+        this.jwtProcessorService = jwtProcessorService;
+        this.objectMapper = new ObjectMapper();
+    }
+
+    @PostConstruct
+    public void initializeRequestData() {
+        try {
+            String payload = Files.readString(Path.of(
+                    new ClassPathResource("request-payload.json").getURI()));
+            String headersJson = Files.readString(Path.of(
+                    new ClassPathResource("request-headers.json").getURI()));
+            Map<String, String> headers = objectMapper.readValue(headersJson, Map.class);
+
+            this.payloadJson = objectMapper.readTree(payload);
+            this.requestData = new RequestData(payload, headers);
+        } catch (Exception e) {
+            System.err.println("Error loading request data: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
 
     @GetMapping("/")
     public String index() {
@@ -35,167 +62,32 @@ public class CheckoutUiController {
     }
 
     @GetMapping("/checkout")
-    public String checkout() {
-        return "checkout";
-    }
-
-    // ── Legacy demo pages (direct API test forms) ──
-
-    @GetMapping("/demo/card")
-    public String cardForm(Model model) {
-        model.addAttribute("paymentRequest", new PaymentRequest());
-        return "checkout/card";
-    }
-
-    @GetMapping("/demo/wallet")
-    public String walletForm(Model model) {
-        model.addAttribute("walletRequest", new WalletPaymentRequest());
-        model.addAttribute("walletTypes", WalletType.values());
-        return "checkout/wallet";
-    }
-
-    @GetMapping("/demo/eft")
-    public String eftForm(Model model) {
-        model.addAttribute("eftRequest", new EftPaymentRequest());
-        return "checkout/eft";
-    }
-
-    @GetMapping("/demo/token")
-    public String tokenForm(Model model) {
-        model.addAttribute("tokenRequest", new TokenRequest());
-        return "checkout/token";
-    }
-
-    @GetMapping("/demo/invoice")
-    public String invoiceForm(Model model) {
-        model.addAttribute("invoiceRequest", new InvoiceRequest());
-        return "checkout/invoice";
-    }
-
-    @GetMapping("/demo/payment-link")
-    public String paymentLinkForm(Model model) {
-        model.addAttribute("linkRequest", new PaymentLinkRequest());
-        return "checkout/payment-link";
-    }
-
-    // ── Card payment form handlers (legacy demo) ──
-
-    @PostMapping("/demo/card/authorize")
-    public String cardAuthorize(PaymentRequest request, Model model) {
-        return processAndRedirect(model, "card", () -> cardPaymentService.authorize(request));
-    }
-
-    @PostMapping("/demo/card/sale")
-    public String cardSale(PaymentRequest request, Model model) {
-        return processAndRedirect(model, "card", () -> cardPaymentService.sale(request));
-    }
-
-    @PostMapping("/demo/card/capture")
-    public String cardCapture(@RequestParam String transactionId,
-                              @RequestParam double amount,
-                              @RequestParam String currency,
-                              Model model) {
-        return processAndRedirect(model, "card",
-                () -> cardPaymentService.capture(transactionId, amount, currency));
-    }
-
-    @PostMapping("/demo/card/refund")
-    public String cardRefund(@RequestParam String transactionId,
-                             @RequestParam double amount,
-                             @RequestParam String currency,
-                             Model model) {
-        return processAndRedirect(model, "card",
-                () -> cardPaymentService.refund(transactionId, amount, currency));
-    }
-
-    @PostMapping("/demo/card/void")
-    public String cardVoid(@RequestParam String transactionId, Model model) {
-        return processAndRedirect(model, "card",
-                () -> cardPaymentService.voidPayment(transactionId));
-    }
-
-    // ── Wallet form handler (legacy demo) ──
-
-    @PostMapping("/demo/wallet")
-    public String walletPay(@RequestParam String walletType,
-                            WalletPaymentRequest request,
-                            Model model) {
-        WalletType type = WalletType.valueOf(walletType);
-        return processAndRedirect(model, "wallet",
-                () -> walletPaymentService.pay(type, request));
-    }
-
-    // ── EFT form handler (legacy demo) ──
-
-    @PostMapping("/demo/eft")
-    public String eftPay(EftPaymentRequest request, Model model) {
-        return processAndRedirect(model, "eft", () -> eftPaymentService.pay(request));
-    }
-
-    // ── Token form handlers (legacy demo) ──
-
-    @PostMapping("/demo/token/store")
-    public String tokenStore(TokenRequest request, Model model) {
-        return processAndRedirect(model, "token",
-                () -> tokenService.storeCustomerCard(request));
-    }
-
-    @PostMapping("/demo/token/pay")
-    public String tokenPay(@RequestParam String customerId,
-                           @RequestParam double amount,
-                           @RequestParam String currency,
-                           Model model) {
-        return processAndRedirect(model, "token",
-                () -> tokenizedPaymentService.payWithToken(customerId, amount, currency));
-    }
-
-    // ── Invoice form handlers (legacy demo) ──
-
-    @PostMapping("/demo/invoice/create")
-    public String invoiceCreate(InvoiceRequest request, Model model) {
-        return processAndRedirect(model, "invoice",
-                () -> invoiceService.createInvoice(request));
-    }
-
-    @PostMapping("/demo/invoice/send")
-    public String invoiceSend(@RequestParam String invoiceId, Model model) {
-        return processAndRedirect(model, "invoice",
-                () -> invoiceService.sendInvoice(invoiceId));
-    }
-
-    // ── Payment link form handler (legacy demo) ──
-
-    @PostMapping("/demo/payment-link")
-    public String paymentLinkCreate(PaymentLinkRequest request, Model model) {
-        return processAndRedirect(model, "payment-link",
-                () -> paymentLinkService.createPaymentLink(request));
-    }
-
-    // ── Shared result handling ──
-
-    private String processAndRedirect(Model model, String backTo, PaymentOperation operation) {
+    public String checkout(Model model) {
         try {
-            PaymentResponse response = operation.execute();
-            model.addAttribute("success", true);
-            model.addAttribute("status", response.getStatus());
-            model.addAttribute("message", response.getMessage());
-            model.addAttribute("transactionId", response.getTransactionId());
-            model.addAttribute("httpStatus", response.getHttpStatus());
-            model.addAttribute("details", response.getDetails());
-        } catch (PaymentException e) {
-            model.addAttribute("success", false);
-            model.addAttribute("message", e.getMessage());
-            model.addAttribute("errorBody", e.getResponseBody());
-        } catch (Exception e) {
-            model.addAttribute("success", false);
-            model.addAttribute("message", "Unexpected error: " + e.getMessage());
-        }
-        model.addAttribute("backTo", backTo);
-        return "result";
-    }
+            // CyberSource round-trip: get capture context JWT
+            String jwt = captureContextService.getCaptureContext(requestData);
 
-    @FunctionalInterface
-    private interface PaymentOperation {
-        PaymentResponse execute();
+            // Extract client library URL + integrity hash from JWT
+            Map<String, String> jwtDetails = jwtProcessorService.processAndPrintJwt(jwt);
+
+            // Populate view model
+            model.addAttribute("jwt", jwt);
+            model.addAttribute("clientLibrary", jwtDetails.get("clientLibrary"));
+            model.addAttribute("clientLibraryIntegrity", jwtDetails.get("clientLibraryIntegrity"));
+
+            // Take the amount from the server-side JSON payload
+            String totalAmount = payloadJson.path("orderInformation")
+                    .path("amountDetails")
+                    .path("totalAmount")
+                    .asText("0.01");
+            model.addAttribute("totalAmount", totalAmount);
+
+            return "checkout";
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            model.addAttribute("error", "Failed to get capture context: " + e.getMessage());
+            return "checkout";
+        }
     }
 }
