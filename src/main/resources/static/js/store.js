@@ -367,6 +367,66 @@ function submitPaymentLink() {
     });
 }
 
+// --- Samsung Pay ---
+
+function renderSamsungPayForm() {
+    return '<div class="wiz-card">'
+        + '<div class="wiz-label">SAMSUNG PAY</div>'
+        + '<p class="text-muted" style="font-size:.9rem;">Pay using Samsung Pay tokenized card data (DPAN + cryptogram).</p>'
+        + '<div class="mb-3"><label class="wiz-field-label">DPAN (Token Number) <span class="text-danger">*</span></label>'
+        + '<input type="text" id="spDpan" class="form-control wiz-input" value="4111111111111111" maxlength="19"></div>'
+        + '<div class="row g-3 mb-3">'
+        + '<div class="col-6"><label class="wiz-field-label">Exp Month</label>'
+        + '<input type="text" id="spExpMonth" class="form-control wiz-input" value="12" maxlength="2"></div>'
+        + '<div class="col-6"><label class="wiz-field-label">Exp Year</label>'
+        + '<input type="text" id="spExpYear" class="form-control wiz-input" value="2028" maxlength="4"></div>'
+        + '</div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Cryptogram <span class="text-danger">*</span></label>'
+        + '<input type="text" id="spCryptogram" class="form-control wiz-input" value="EHuWW9PiBkWvqE5juRwDzAUFBAk=" placeholder="Base64 cryptogram"></div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Card Type</label>'
+        + '<select id="spCardType" class="form-select wiz-input">'
+        + '<option value="001">Visa</option>'
+        + '<option value="002">Mastercard</option>'
+        + '<option value="003">Amex</option>'
+        + '</select></div>'
+        + '<button class="wiz-btn w-100" id="spBtn" onclick="submitSamsungPay()">'
+        + '<i class="bi bi-phone me-2"></i>Pay with Samsung Pay</button>'
+        + '<div id="spResult" class="mt-3" style="display:none;"></div>'
+        + '</div>';
+}
+
+function submitSamsungPay() {
+    var btn = document.getElementById('spBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing Samsung Pay...';
+
+    var req = {
+        dpan: document.getElementById('spDpan').value.trim(),
+        expirationMonth: document.getElementById('spExpMonth').value.trim(),
+        expirationYear: document.getElementById('spExpYear').value.trim(),
+        cryptogram: document.getElementById('spCryptogram').value.trim(),
+        cardType: document.getElementById('spCardType').value,
+        amount: parseFloat(getTotal().toFixed(2)),
+        currency: 'ZAR'
+    };
+
+    callApi('/api/samsung-pay', 'POST', req).then(function(result) {
+        var el = document.getElementById('spResult');
+        el.style.display = 'block';
+        if (result.ok) {
+            el.innerHTML = '<div class="alert alert-success">'
+                + '<strong>' + esc(result.data.status) + '</strong> — ' + esc(result.data.message)
+                + (result.data.transactionId ? '<br><small>Transaction: ' + esc(result.data.transactionId) + '</small>' : '')
+                + '</div>';
+            btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Payment Complete';
+        } else {
+            el.innerHTML = '<div class="alert alert-danger"><strong>Error</strong> — ' + esc(result.data.message || 'Unknown error') + '</div>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-phone me-2"></i>Pay with Samsung Pay';
+        }
+    });
+}
+
 function wizardBack() {
     window.location.href = '/cart';
 }
