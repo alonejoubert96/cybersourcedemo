@@ -53,12 +53,23 @@ public class PaymentLinkService {
             PaymentLinksApi api = new PaymentLinksApi(apiClient);
             PblPaymentLinksPost201Response result = api.createPaymentLink(linkRequest);
 
+            String paymentUrl = null;
+            if (result.getPurchaseInformation() != null) {
+                paymentUrl = result.getPurchaseInformation().getPaymentLink();
+            }
+
+            Map<String, Object> details = new java.util.HashMap<>();
+            details.put("linkId", result.getId());
+            if (paymentUrl != null) {
+                details.put("paymentUrl", paymentUrl);
+            }
+
             return PaymentResponse.builder()
                     .status(result.getStatus())
                     .transactionId(result.getId())
                     .message("Payment link created successfully")
                     .httpStatus(Integer.parseInt(apiClient.responseCode))
-                    .details(Map.of("linkId", result.getId()))
+                    .details(details)
                     .build();
 
         } catch (Invokers.ApiException e) {

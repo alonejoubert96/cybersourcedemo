@@ -617,9 +617,11 @@ function showInvoiceResult(result, invoiceId) {
 function renderPaymentLinkForm() {
     return '<div class="wiz-card">'
         + '<div class="wiz-label">PAYMENT LINK</div>'
-        + '<p class="text-muted" style="font-size:.9rem;">A secure hosted payment link will be created.</p>'
+        + '<p class="text-muted" style="font-size:.9rem;">Create a secure payment link. Share it via QR code, WhatsApp, or copy the link.</p>'
         + '<div class="mb-3"><label class="wiz-field-label">Description</label>'
         + '<input type="text" id="linkDesc" class="form-control wiz-input" value="CyberShop Payment" placeholder="Payment description"></div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Recipient Phone (for WhatsApp)</label>'
+        + '<input type="tel" id="linkPhone" class="form-control wiz-input" placeholder="+27821234567"></div>'
         + '<button class="wiz-btn w-100" id="linkBtn" onclick="submitPaymentLink()">'
         + '<i class="bi bi-link-45deg me-2"></i>Create Payment Link</button>'
         + '<div id="linkResult" class="mt-3" style="display:none;"></div>'
@@ -631,9 +633,13 @@ function submitPaymentLink() {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creating link...';
 
+    var desc = document.getElementById('linkDesc').value.trim() || 'CyberShop Payment';
+    var phone = document.getElementById('linkPhone').value.trim().replace(/\s/g, '');
+    var total = getTotal();
+
     var req = {
-        description: document.getElementById('linkDesc').value.trim() || 'CyberShop Payment',
-        amount: parseFloat(getTotal().toFixed(2)),
+        description: desc,
+        amount: parseFloat(total.toFixed(2)),
         currency: 'ZAR'
     };
 
@@ -641,15 +647,50 @@ function submitPaymentLink() {
         var el = document.getElementById('linkResult');
         el.style.display = 'block';
         if (result.ok) {
-            el.innerHTML = '<div class="alert alert-success">'
-                + '<strong>' + esc(result.data.status) + '</strong> — ' + esc(result.data.message)
-                + (result.data.transactionId ? '<br><small>Link ID: ' + esc(result.data.transactionId) + '</small>' : '')
-                + '</div>';
+            var paymentUrl = (result.data.details && result.data.details.paymentUrl) || '';
+            if (!paymentUrl) {
+                el.innerHTML = '<div class="alert alert-success">'
+                    + '<strong>Link Created</strong> — ' + esc(result.data.message)
+                    + '<br><small>Link ID: ' + esc(result.data.transactionId) + '</small>'
+                    + '</div>';
+                btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Link Created';
+                return;
+            }
+
+            var whatsappMsg = 'Hi! Please use this link to complete your payment of ' + fmt(total) + ':\n' + paymentUrl;
+            var whatsappUrl = 'https://wa.me/' + (phone.replace(/^\+/, '') || '') + '?text=' + encodeURIComponent(whatsappMsg);
+
+            el.innerHTML = '<div class="text-center mb-3">'
+                + '<img src="/api/qr?url=' + encodeURIComponent(paymentUrl) + '" alt="QR Code" '
+                + 'style="width:200px;height:200px;border-radius:8px;border:1px solid #e9ecef;" />'
+                + '<p class="text-muted mt-2 mb-0" style="font-size:.8rem;">Scan to pay ' + fmt(total) + '</p>'
+                + '</div>'
+                + '<div class="d-flex gap-2 mb-3">'
+                + '<a href="' + esc(whatsappUrl) + '" target="_blank" class="btn btn-success flex-grow-1">'
+                + '<i class="bi bi-whatsapp me-2"></i>Send via WhatsApp</a>'
+                + '<button class="btn btn-outline-secondary flex-grow-0" onclick="copyPaymentLink(\'' + esc(paymentUrl) + '\')" title="Copy link">'
+                + '<i class="bi bi-clipboard"></i></button>'
+                + '</div>'
+                + '<div class="input-group mb-2">'
+                + '<input type="text" class="form-control wiz-input" value="' + esc(paymentUrl) + '" readonly style="font-size:.8rem;">'
+                + '</div>'
+                + '<div id="copyMsg" style="display:none;" class="text-success text-center" style="font-size:.85rem;"></div>';
             btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Link Created';
         } else {
             el.innerHTML = '<div class="alert alert-danger"><strong>Error</strong> — ' + esc(result.data.message || 'Unknown error') + '</div>';
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-link-45deg me-2"></i>Create Payment Link';
+        }
+    });
+}
+
+function copyPaymentLink(url) {
+    navigator.clipboard.writeText(url).then(function() {
+        var msg = document.getElementById('copyMsg');
+        if (msg) {
+            msg.style.display = 'block';
+            msg.innerHTML = '<i class="bi bi-check-circle me-1"></i>Link copied!';
+            setTimeout(function() { msg.style.display = 'none'; }, 2000);
         }
     });
 }
