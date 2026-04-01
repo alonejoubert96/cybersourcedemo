@@ -5,6 +5,7 @@ import com.example.cybersourcedemo.service.CaptureContextService;
 import com.example.cybersourcedemo.service.JwtProcessorService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
@@ -62,10 +63,27 @@ public class CheckoutUiController {
     }
 
     @GetMapping("/checkout")
-    public String checkout(Model model) {
+    public String checkout(@org.springframework.web.bind.annotation.RequestParam(value = "amount", required = false) String amount,
+                           Model model) {
         try {
+            // Override the amount in the payload if provided from the cart
+            RequestData requestToUse = this.requestData;
+            String totalAmount = payloadJson.path("orderInformation")
+                    .path("amountDetails")
+                    .path("totalAmount")
+                    .asText("0.01");
+
+            if (amount != null && !amount.isBlank()) {
+                totalAmount = amount;
+                ObjectNode payloadCopy = (ObjectNode) objectMapper.readTree(requestData.getPayload());
+                ((ObjectNode) payloadCopy.path("orderInformation").path("amountDetails"))
+                        .put("totalAmount", amount);
+                requestToUse = new RequestData(objectMapper.writeValueAsString(payloadCopy),
+                        requestData.getHeaders());
+            }
+
             // CyberSource round-trip: get capture context JWT
-            String jwt = captureContextService.getCaptureContext(requestData);
+            String jwt = captureContextService.getCaptureContext(requestToUse);
 
             // Extract client library URL + integrity hash from JWT
             Map<String, String> jwtDetails = jwtProcessorService.processAndPrintJwt(jwt);
@@ -74,12 +92,6 @@ public class CheckoutUiController {
             model.addAttribute("jwt", jwt);
             model.addAttribute("clientLibrary", jwtDetails.get("clientLibrary"));
             model.addAttribute("clientLibraryIntegrity", jwtDetails.get("clientLibraryIntegrity"));
-
-            // Take the amount from the server-side JSON payload
-            String totalAmount = payloadJson.path("orderInformation")
-                    .path("amountDetails")
-                    .path("totalAmount")
-                    .asText("0.01");
             model.addAttribute("totalAmount", totalAmount);
 
             return "checkout";

@@ -96,34 +96,29 @@
         .payment-method-item {
             display: flex;
             align-items: center;
-            gap: 14px;
-            border: 2px solid #dee2e6;
-            border-radius: 8px;
-            padding: 14px 16px;
+            justify-content: center;
+            gap: 8px;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 14px;
             cursor: pointer;
-            transition: all .15s;
-            background: #fff;
+            transition: opacity .15s;
+            background: #000;
         }
         .payment-method-item:hover {
-            border-color: var(--cs-primary);
-            background: rgba(26, 31, 113, .03);
+            opacity: 0.85;
         }
         .payment-method-item .method-icon {
-            font-size: 1.4rem;
-            color: var(--cs-primary);
-            width: 32px;
-            text-align: center;
-            flex-shrink: 0;
+            font-size: 1.1rem;
+            color: #fff;
         }
         .payment-method-item .method-label {
-            font-size: 0.95rem;
-            font-weight: 600;
-            color: #333;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #fff;
         }
         .payment-method-item .method-chevron {
-            margin-left: auto;
-            color: #adb5bd;
-            font-size: 1rem;
+            display: none;
         }
 
         /* Payment sidebar */

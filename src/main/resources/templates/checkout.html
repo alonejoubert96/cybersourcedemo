@@ -23,34 +23,32 @@
     <!-- Order Summary (rendered by store.js) -->
     <div id="wizardContent"></div>
 
-    <!-- Payment Methods -->
+    <!-- Unified Checkout -->
     <div class="wiz-card">
-        <div class="wiz-label">CHOOSE PAYMENT METHOD</div>
+        <div class="wiz-label">UNIFIED CHECKOUT</div>
+        <div id="ucWidgetContainer"></div>
+        <div id="ucConfirmation" style="display:none;"></div>
+    </div>
+
+    <!-- Other Payment Options -->
+    <div class="wiz-card">
+        <div class="wiz-label">OTHER PAYMENT OPTIONS</div>
         <div class="payment-method-list">
-            <div class="payment-method-item" onclick="openCardSidebar()">
-                <div class="method-icon"><i class="bi bi-credit-card"></i></div>
-                <div class="method-label">Card</div>
-                <div class="method-chevron"><i class="bi bi-chevron-right"></i></div>
-            </div>
-            <div class="payment-method-item" onclick="openWalletSidebar()">
-                <div class="method-icon"><i class="bi bi-wallet2"></i></div>
-                <div class="method-label">Digital Wallet</div>
-                <div class="method-chevron"><i class="bi bi-chevron-right"></i></div>
-            </div>
-            <div class="payment-method-item" onclick="openCustomSidebar('token')">
-                <div class="method-icon"><i class="bi bi-shield-check"></i></div>
-                <div class="method-label">Saved Card</div>
-                <div class="method-chevron"><i class="bi bi-chevron-right"></i></div>
+            <div class="payment-method-item" onclick="openCustomSidebar('paymentLink')">
+                <div class="method-icon"><i class="bi bi-link-45deg"></i></div>
+                <div class="method-label">Payment Link</div>
             </div>
             <div class="payment-method-item" onclick="openCustomSidebar('invoice')">
                 <div class="method-icon"><i class="bi bi-receipt"></i></div>
                 <div class="method-label">Pay by Invoice</div>
-                <div class="method-chevron"><i class="bi bi-chevron-right"></i></div>
             </div>
-            <div class="payment-method-item" onclick="openCustomSidebar('paymentLink')">
-                <div class="method-icon"><i class="bi bi-link-45deg"></i></div>
-                <div class="method-label">Payment Link</div>
-                <div class="method-chevron"><i class="bi bi-chevron-right"></i></div>
+            <div class="payment-method-item" onclick="openCustomSidebar('samsungPay')">
+                <div class="method-icon"><i class="bi bi-phone"></i></div>
+                <div class="method-label">Samsung Pay</div>
+            </div>
+            <div class="payment-method-item" onclick="openCustomSidebar('token')">
+                <div class="method-icon"><i class="bi bi-shield-lock"></i></div>
+                <div class="method-label">Saved Card</div>
             </div>
         </div>
     </div>
@@ -79,8 +77,6 @@
 <script>initCheckout();</script>
 <script>
     var jwt = document.getElementById("jwt").value;
-    var ucInitialized = false;
-    var ucSidebarPending = false;
 
     // Parse JWT payload
     function parseJwt(token) {
@@ -97,8 +93,30 @@
         }
     }
 
-    // Show payment confirmation in sidebar (same style as saved card)
-    function showPaymentConfirmation(paymentDetails) {
+
+    // Initialize UC widget inline on page load
+    async function initUcWidget() {
+        try {
+            var accept = await Accept(jwt);
+            var up = await accept.unifiedPayments(true);
+
+            var tt = await up.show({
+                containers: { paymentSelection: "#ucWidgetContainer" }
+            });
+
+            var completeResponse = await up.complete(tt);
+            var parsed = parseJwt(completeResponse);
+            if (parsed) {
+                document.getElementById('ucWidgetContainer').style.display = 'none';
+                clearCart();
+                showUcConfirmation(parsed);
+            }
+        } catch (error) {
+            console.error("UC payment error:", error);
+        }
+    }
+
+    function showUcConfirmation(paymentDetails) {
         var transactionId = (paymentDetails.details &&
             paymentDetails.details.processorInformation &&
             paymentDetails.details.processorInformation.transactionId) ||
@@ -116,7 +134,6 @@
         }
         var displayAmount = amount ? (currency === 'ZAR' ? 'R' : currency + ' ') + parseFloat(amount).toFixed(2) : fmt(getTotal());
 
-        // Try to extract card info from payment details
         var cardNumber = '';
         var cardType = '';
         if (paymentDetails.details &&
@@ -142,144 +159,28 @@
         var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
         var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
 
-        document.getElementById('paymentSidebarLabel').textContent = 'Payment Complete';
-        document.getElementById('sidebarContent').innerHTML =
+        var el = document.getElementById('ucConfirmation');
+        el.style.display = 'block';
+        el.innerHTML =
             '<div class="text-center py-3">'
             + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
             + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
             + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
             + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase!</p>'
             + '</div>'
-            + '<div class="wiz-card mt-2">'
-            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + displayAmount + '</span></div>'
+            + '<div class="d-flex justify-content-between mb-2 mt-3"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + displayAmount + '</span></div>'
             + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
             + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
             + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
             + (cardNumber ? '<hr><div class="d-flex align-items-center gap-3">'
                 + '<div style="font-size:1.4rem;color:' + b.color + ';"><i class="bi ' + b.icon + '"></i></div>'
                 + '<div><div class="fw-semibold" style="font-size:.9rem;color:' + b.color + ';">' + esc(b.name) + ' ending in ' + esc(cardNumber) + '</div></div></div>' : '')
-            + '</div>'
             + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
             + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
     }
 
-    // Initialize UC widget inside the sidebar
-    async function initUcWidget() {
-        var sidebarEl = document.getElementById('paymentSidebar');
-        var sidebar = bootstrap.Offcanvas.getOrCreateInstance(sidebarEl);
+    initUcWidget();
 
-        sidebarEl.addEventListener('shown.bs.offcanvas', async function handler() {
-            sidebarEl.removeEventListener('shown.bs.offcanvas', handler);
-
-            if (ucSidebarPending) return;
-            ucSidebarPending = true;
-
-            try {
-                var accept = await Accept(jwt);
-                var up = await accept.unifiedPayments(true);
-
-                var spinner = document.querySelector('#sidebarContent .spinner-border');
-                if (spinner) spinner.closest('.text-center').remove();
-
-                ucInitialized = true;
-
-                var tt = await up.show({
-                    containers: { paymentSelection: "#ucWidgetContainer" }
-                });
-
-                var completeResponse = await up.complete(tt);
-                var parsed = parseJwt(completeResponse);
-                if (parsed) {
-                    showPaymentConfirmation(parsed);
-                }
-            } catch (error) {
-                console.error("UC payment error:", error);
-                ucSidebarPending = false;
-            }
-        });
-
-        sidebar.show();
-    }
-
-    // Open sidebar for Card payment
-    function openCardSidebar() {
-        var sidebarEl = document.getElementById('paymentSidebar');
-        var sidebar = bootstrap.Offcanvas.getOrCreateInstance(sidebarEl);
-
-        if (ucInitialized) {
-            document.getElementById('paymentSidebarLabel').textContent = 'Pay with Card';
-            sidebar.show();
-            return;
-        }
-
-        ucInitialized = false;
-        ucSidebarPending = false;
-
-        document.getElementById('paymentSidebarLabel').textContent = 'Pay with Card';
-        document.getElementById('sidebarContent').innerHTML =
-            '<div class="text-center my-4">'
-            + '<div class="spinner-border text-primary" role="status">'
-            + '<span class="visually-hidden">Loading...</span></div>'
-            + '<p class="text-muted mt-2">Loading payment options...</p></div>'
-            + '<div id="ucWidgetContainer" class="mt-3"></div>';
-
-        initUcWidget();
-    }
-
-    // Open sidebar for Digital Wallet — shows sub-list first
-    function openWalletSidebar() {
-        ucInitialized = false;
-        ucSidebarPending = false;
-
-        document.getElementById('paymentSidebarLabel').textContent = 'Choose wallet payment option';
-        document.getElementById('sidebarContent').innerHTML =
-            '<div class="payment-method-list">'
-            + '<div class="payment-method-item" onclick="selectWallet(\'Apple Pay\')">'
-            + '<div class="method-icon"><i class="bi bi-apple"></i></div>'
-            + '<div class="method-label">Apple Pay</div>'
-            + '<div class="method-chevron"><i class="bi bi-chevron-right"></i></div></div>'
-            + '<div class="payment-method-item" onclick="selectWallet(\'Google Pay\')">'
-            + '<div class="method-icon"><i class="bi bi-google"></i></div>'
-            + '<div class="method-label">Google Pay</div>'
-            + '<div class="method-chevron"><i class="bi bi-chevron-right"></i></div></div>'
-            + '<div class="payment-method-item" onclick="selectWallet(\'Click to Pay\')">'
-            + '<div class="method-icon"><i class="bi bi-cursor-fill"></i></div>'
-            + '<div class="method-label">Click to Pay</div>'
-            + '<div class="method-chevron"><i class="bi bi-chevron-right"></i></div></div>'
-            + '<div class="payment-method-item" onclick="selectWallet(\'Samsung Pay\')">'
-            + '<div class="method-icon"><i class="bi bi-phone"></i></div>'
-            + '<div class="method-label">Samsung Pay</div>'
-            + '<div class="method-chevron"><i class="bi bi-chevron-right"></i></div></div>'
-            + '</div>';
-
-        var sidebar = bootstrap.Offcanvas.getOrCreateInstance(
-            document.getElementById('paymentSidebar'));
-        sidebar.show();
-    }
-
-    // User selected a specific wallet
-    function selectWallet(walletName) {
-        if (walletName === 'Samsung Pay') {
-            openSamsungPayForm();
-            return;
-        }
-
-        document.getElementById('paymentSidebarLabel').textContent = 'Pay with ' + walletName;
-        document.getElementById('sidebarContent').innerHTML =
-            '<div class="text-center my-4">'
-            + '<div class="spinner-border text-primary" role="status">'
-            + '<span class="visually-hidden">Loading...</span></div>'
-            + '<p class="text-muted mt-2">Loading ' + walletName + '...</p></div>'
-            + '<div id="ucWidgetContainer" class="mt-3"></div>';
-
-        initUcWidget();
-    }
-
-    // Samsung Pay form
-    function openSamsungPayForm() {
-        document.getElementById('paymentSidebarLabel').textContent = 'Pay with Samsung Pay';
-        document.getElementById('sidebarContent').innerHTML = renderSamsungPayForm();
-    }
 
     // Open sidebar with custom payment form
     function openCustomSidebar(method) {
@@ -289,12 +190,14 @@
         var titles = {
             token: 'Saved Card',
             invoice: 'Pay by Invoice',
-            paymentLink: 'Payment Link'
+            paymentLink: 'Payment Link',
+            samsungPay: 'Samsung Pay'
         };
         var renderers = {
             token: renderTokenForm,
             invoice: renderInvoiceForm,
-            paymentLink: renderPaymentLinkForm
+            paymentLink: renderPaymentLinkForm,
+            samsungPay: renderSamsungPayForm
         };
 
         document.getElementById('paymentSidebarLabel').textContent = titles[method];

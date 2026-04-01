@@ -130,7 +130,7 @@ function renderCartPage() {
 
 function goToCheckout() {
     if (getCartCount() === 0) return;
-    window.location.href = '/checkout';
+    window.location.href = '/checkout?amount=' + getTotal().toFixed(2);
 }
 
 // --- helpers for API calls ---
@@ -223,16 +223,19 @@ function onCardNumberInput(el) {
 // Always show card list first — even if empty
 function renderTokenForm() {
     return '<div id="savedCardRoot">'
-        + '<div class="wiz-card">'
-        + '<div class="wiz-label">YOUR SAVED CARDS</div>'
-        + '<p class="text-muted" style="font-size:.85rem;">Select a card to pay with</p>'
+        + '<div class="wiz-card" style="border-top:3px solid #1a1f71;">'
+        + '<div class="d-flex align-items-center gap-2 mb-3">'
+        + '<div style="width:40px;height:40px;border-radius:8px;background:#1a1f71;display:flex;align-items:center;justify-content:center;">'
+        + '<i class="bi bi-shield-lock" style="color:#fff;font-size:1.2rem;"></i></div>'
+        + '<div><div class="fw-bold" style="color:#1a1f71;">Saved Cards</div>'
+        + '<div class="text-muted" style="font-size:.75rem;">Select a card to pay with</div></div></div>'
         + '<div id="savedCardList"><div class="text-center my-4">'
-        + '<div class="spinner-border spinner-border-sm text-primary"></div>'
+        + '<div class="spinner-border spinner-border-sm" style="color:#1a1f71;"></div>'
         + '<p class="text-muted mt-2" style="font-size:.85rem;">Loading saved cards...</p></div></div>'
-        + '<button class="wiz-btn w-100 mt-3" id="proceedBtn" onclick="proceedWithCard()" disabled>'
+        + '<button class="w-100 border-0 py-2 rounded-2 fw-bold mt-3" id="proceedBtn" onclick="proceedWithCard()" disabled style="background:#1a1f71;color:#fff;font-size:.95rem;opacity:.6;">'
         + '<i class="bi bi-arrow-right me-2"></i>Proceed</button>'
         + '<div class="d-flex gap-2 mt-2">'
-        + '<button class="btn btn-outline-primary flex-grow-1" onclick="showAddCardForm()">'
+        + '<button class="btn flex-grow-1 fw-semibold" onclick="showAddCardForm()" style="border:1px solid #1a1f71;color:#1a1f71;">'
         + '<i class="bi bi-plus-circle me-2"></i>Add New Card</button>'
         + '<button class="btn btn-outline-danger flex-grow-0" id="deleteCardBtn" onclick="deleteSelectedCard()" disabled>'
         + '<i class="bi bi-trash3"></i></button>'
@@ -390,6 +393,13 @@ function proceedWithCard() {
 }
 
 function completeCardPayment() {
+    if (getCartCount() === 0) {
+        var el = document.getElementById('paymentResult');
+        el.style.display = 'block';
+        el.innerHTML = '<div class="alert alert-warning">Your cart is empty. Please add items before paying.</div>';
+        return;
+    }
+
     var customerId = getSavedCustomerId();
     if (!customerId || _selectedCardIndex < 0) return;
 
@@ -413,6 +423,8 @@ function completeCardPayment() {
             var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
             var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
             var ref = (result.data.transactionId || '').slice(-8).toUpperCase();
+
+            clearCart();
 
             var root = document.getElementById('savedCardRoot');
             if (!root) root = document.getElementById('sidebarContent');
@@ -452,9 +464,12 @@ function completeCardPayment() {
 function showAddCardForm() {
     var root = document.getElementById('savedCardRoot');
     if (!root) root = document.getElementById('sidebarContent');
-    root.innerHTML = '<div class="wiz-card">'
-        + '<div class="wiz-label">ADD NEW CARD</div>'
-        + '<p class="text-muted" style="font-size:.9rem;">Your card will be securely tokenized. We never store full card numbers.</p>'
+    root.innerHTML = '<div class="wiz-card" style="border-top:3px solid #1a1f71;">'
+        + '<div class="d-flex align-items-center gap-2 mb-3">'
+        + '<div style="width:40px;height:40px;border-radius:8px;background:#1a1f71;display:flex;align-items:center;justify-content:center;">'
+        + '<i class="bi bi-plus-circle" style="color:#fff;font-size:1.2rem;"></i></div>'
+        + '<div><div class="fw-bold" style="color:#1a1f71;">Add New Card</div>'
+        + '<div class="text-muted" style="font-size:.75rem;">Securely tokenized — we never store full card numbers</div></div></div>'
         + '<div class="row g-3 mb-3">'
         + '<div class="col-12"><label class="wiz-field-label">Card Number <span class="text-danger">*</span></label>'
         + '<input type="text" id="tokCardNumber" class="form-control wiz-input" placeholder="\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022" maxlength="23" oninput="onCardNumberInput(this)" autocomplete="off"></div>'
@@ -475,10 +490,10 @@ function showAddCardForm() {
         + '</div>'
         + '<div class="mb-3"><label class="wiz-field-label">Email <span class="text-danger">*</span></label>'
         + '<input type="email" id="tokEmail" class="form-control wiz-input" placeholder="john@example.com"></div>'
-        + '<button class="wiz-btn w-100" id="tokenStoreBtn" onclick="submitAddCard()">'
+        + '<button class="w-100 border-0 py-2 rounded-2 fw-bold" id="tokenStoreBtn" onclick="submitAddCard()" style="background:#1a1f71;color:#fff;font-size:.95rem;">'
         + '<i class="bi bi-shield-check me-2"></i>Save Card</button>'
         + '<div id="tokenResult" class="mt-3" style="display:none;"></div>'
-        + '<button class="btn btn-outline-secondary w-100 mt-2" onclick="backToCardList()">'
+        + '<button class="btn w-100 mt-2 fw-semibold" onclick="backToCardList()" style="border:1px solid #1a1f71;color:#1a1f71;">'
         + '<i class="bi bi-arrow-left me-2"></i>Back to Cards</button>'
         + '</div>';
     _rawCardNumber = '';
@@ -488,13 +503,17 @@ function backToCardList() {
     var root = document.getElementById('savedCardRoot');
     if (!root) root = document.getElementById('sidebarContent');
     root.innerHTML = '<div id="savedCardRoot">'
-        + '<div class="wiz-card">'
-        + '<div class="wiz-label">YOUR SAVED CARDS</div>'
+        + '<div class="wiz-card" style="border-top:3px solid #1a1f71;">'
+        + '<div class="d-flex align-items-center gap-2 mb-3">'
+        + '<div style="width:40px;height:40px;border-radius:8px;background:#1a1f71;display:flex;align-items:center;justify-content:center;">'
+        + '<i class="bi bi-shield-lock" style="color:#fff;font-size:1.2rem;"></i></div>'
+        + '<div><div class="fw-bold" style="color:#1a1f71;">Saved Cards</div>'
+        + '<div class="text-muted" style="font-size:.75rem;">Select a card to pay with</div></div></div>'
         + '<div id="savedCardList"><div class="text-center my-4">'
-        + '<div class="spinner-border spinner-border-sm text-primary"></div>'
+        + '<div class="spinner-border spinner-border-sm" style="color:#1a1f71;"></div>'
         + '</div></div>'
         + '</div>'
-        + '<button class="btn btn-outline-primary w-100 mt-3" onclick="showAddCardForm()">'
+        + '<button class="btn w-100 mt-3 fw-semibold" onclick="showAddCardForm()" style="border:1px solid #1a1f71;color:#1a1f71;">'
         + '<i class="bi bi-plus-circle me-2"></i>Add New Card</button>'
         + '</div>';
     initSavedCardView();
@@ -552,24 +571,34 @@ function deleteSelectedCard() {
 
 function renderInvoiceForm() {
     var due = new Date(); due.setDate(due.getDate() + 14);
-    return '<div class="wiz-card">'
-        + '<div class="wiz-label">PAY BY INVOICE</div>'
-        + '<p class="text-muted" style="font-size:.9rem;">An invoice will be created and sent to your email.</p>'
+    return '<div class="wiz-card" style="border-top:3px solid #0d6efd;">'
+        + '<div class="d-flex align-items-center gap-2 mb-3">'
+        + '<div style="width:40px;height:40px;border-radius:8px;background:#0d6efd;display:flex;align-items:center;justify-content:center;">'
+        + '<i class="bi bi-receipt" style="color:#fff;font-size:1.2rem;"></i></div>'
+        + '<div><div class="fw-bold" style="color:#0d6efd;">Pay by Invoice</div>'
+        + '<div class="text-muted" style="font-size:.75rem;">Invoice will be created and sent to your email</div></div></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Email <span class="text-danger">*</span></label>'
-        + '<input type="email" id="invEmail" class="form-control wiz-input" placeholder="you@example.com"></div>'
+        + '<input type="email" id="invEmail" class="form-control wiz-input" placeholder="you@example.com" style="border-color:#0d6efd33;"></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Name</label>'
-        + '<input type="text" id="invName" class="form-control wiz-input" placeholder="Your name"></div>'
+        + '<input type="text" id="invName" class="form-control wiz-input" placeholder="Your name" style="border-color:#0d6efd33;"></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Description</label>'
-        + '<input type="text" id="invDesc" class="form-control wiz-input" value="CyberShop Order" placeholder="Order description"></div>'
+        + '<input type="text" id="invDesc" class="form-control wiz-input" value="CyberShop Order" placeholder="Order description" style="border-color:#0d6efd33;"></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Due Date</label>'
-        + '<input type="date" id="invDue" class="form-control wiz-input" value="' + due.toISOString().split('T')[0] + '"></div>'
-        + '<button class="wiz-btn w-100" id="invoiceBtn" onclick="submitInvoice()">'
+        + '<input type="date" id="invDue" class="form-control wiz-input" value="' + due.toISOString().split('T')[0] + '" style="border-color:#0d6efd33;"></div>'
+        + '<button class="w-100 border-0 py-2 rounded-2 fw-bold" id="invoiceBtn" onclick="submitInvoice()" style="background:#0d6efd;color:#fff;font-size:.95rem;">'
         + '<i class="bi bi-receipt me-2"></i>Create &amp; Send Invoice</button>'
         + '<div id="invoiceResult" class="mt-3" style="display:none;"></div>'
         + '</div>';
 }
 
 function submitInvoice() {
+    if (getCartCount() === 0) {
+        var el = document.getElementById('invoiceResult');
+        el.style.display = 'block';
+        el.innerHTML = '<div class="alert alert-warning">Your cart is empty. Please add items before creating an invoice.</div>';
+        return;
+    }
+
     var btn = document.getElementById('invoiceBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creating invoice...';
@@ -596,16 +625,32 @@ function submitInvoice() {
 }
 
 function showInvoiceResult(result, invoiceId) {
-    var el = document.getElementById('invoiceResult');
-    el.style.display = 'block';
     var btn = document.getElementById('invoiceBtn');
     if (result.ok) {
-        el.innerHTML = '<div class="alert alert-success">'
-            + '<strong>' + esc(result.data.status) + '</strong> — ' + esc(result.data.message)
-            + (invoiceId ? '<br><small>Invoice ID: ' + esc(invoiceId) + '</small>' : '')
-            + '</div>';
-        btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Invoice Sent';
+        var now = new Date();
+        var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+        var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+
+        document.getElementById('sidebarContent').innerHTML =
+            '<div class="text-center py-3">'
+            + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
+            + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
+            + '<h5 class="fw-bold mb-1">Invoice Sent</h5>'
+            + '<p class="text-muted mb-0" style="font-size:.9rem;">The invoice has been emailed to the recipient.</p>'
+            + '</div>'
+            + '<div class="wiz-card mt-2">'
+            + (invoiceId ? '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Invoice ID</span><span class="fw-semibold" style="font-family:monospace;">' + esc(invoiceId) + '</span></div>' : '')
+            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
+            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
+            + '<hr><div class="d-flex align-items-center gap-3">'
+            + '<div style="font-size:1.4rem;color:#0d6efd;"><i class="bi bi-receipt"></i></div>'
+            + '<div><div class="fw-semibold" style="font-size:.9rem;color:#0d6efd;">Pay by Invoice</div></div></div>'
+            + '</div>'
+            + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
+            + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
     } else {
+        var el = document.getElementById('invoiceResult');
+        el.style.display = 'block';
         el.innerHTML = '<div class="alert alert-danger"><strong>Error</strong> — ' + esc(result.data.message || 'Unknown error') + '</div>';
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-receipt me-2"></i>Create &amp; Send Invoice';
@@ -615,20 +660,30 @@ function showInvoiceResult(result, invoiceId) {
 // --- Payment Link ---
 
 function renderPaymentLinkForm() {
-    return '<div class="wiz-card">'
-        + '<div class="wiz-label">PAYMENT LINK</div>'
-        + '<p class="text-muted" style="font-size:.9rem;">Create a secure payment link. Share it via QR code, WhatsApp, or copy the link.</p>'
+    return '<div class="wiz-card" style="border-top:3px solid #E21836;">'
+        + '<div class="d-flex align-items-center gap-2 mb-3">'
+        + '<div style="width:40px;height:40px;border-radius:8px;background:#E21836;display:flex;align-items:center;justify-content:center;">'
+        + '<i class="bi bi-link-45deg" style="color:#fff;font-size:1.2rem;"></i></div>'
+        + '<div><div class="fw-bold" style="color:#E21836;">Payment Link</div>'
+        + '<div class="text-muted" style="font-size:.75rem;">Share via QR code, WhatsApp, or copy link</div></div></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Description</label>'
-        + '<input type="text" id="linkDesc" class="form-control wiz-input" value="CyberShop Payment" placeholder="Payment description"></div>'
+        + '<input type="text" id="linkDesc" class="form-control wiz-input" value="CyberShop Payment" placeholder="Payment description" style="border-color:#E2183633;"></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Recipient Phone (for WhatsApp)</label>'
-        + '<input type="tel" id="linkPhone" class="form-control wiz-input" placeholder="+27821234567"></div>'
-        + '<button class="wiz-btn w-100" id="linkBtn" onclick="submitPaymentLink()">'
+        + '<input type="tel" id="linkPhone" class="form-control wiz-input" placeholder="+27821234567" style="border-color:#E2183633;"></div>'
+        + '<button class="w-100 border-0 py-2 rounded-2 fw-bold" id="linkBtn" onclick="submitPaymentLink()" style="background:#E21836;color:#fff;font-size:.95rem;">'
         + '<i class="bi bi-link-45deg me-2"></i>Create Payment Link</button>'
         + '<div id="linkResult" class="mt-3" style="display:none;"></div>'
         + '</div>';
 }
 
 function submitPaymentLink() {
+    if (getCartCount() === 0) {
+        var el = document.getElementById('linkResult');
+        el.style.display = 'block';
+        el.innerHTML = '<div class="alert alert-warning">Your cart is empty. Please add items before creating a payment link.</div>';
+        return;
+    }
+
     var btn = document.getElementById('linkBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creating link...';
@@ -698,32 +753,42 @@ function copyPaymentLink(url) {
 // --- Samsung Pay ---
 
 function renderSamsungPayForm() {
-    return '<div class="wiz-card">'
-        + '<div class="wiz-label">SAMSUNG PAY</div>'
-        + '<p class="text-muted" style="font-size:.9rem;">Pay using Samsung Pay tokenized card data (DPAN + cryptogram).</p>'
+    return '<div class="wiz-card" style="border-top:3px solid #1428A0;">'
+        + '<div class="d-flex align-items-center gap-2 mb-3">'
+        + '<div style="width:40px;height:40px;border-radius:8px;background:#1428A0;display:flex;align-items:center;justify-content:center;">'
+        + '<i class="bi bi-phone" style="color:#fff;font-size:1.2rem;"></i></div>'
+        + '<div><div class="fw-bold" style="color:#1428A0;">Samsung Pay</div>'
+        + '<div class="text-muted" style="font-size:.75rem;">Tokenized card data (DPAN + cryptogram)</div></div></div>'
         + '<div class="mb-3"><label class="wiz-field-label">DPAN (Token Number) <span class="text-danger">*</span></label>'
-        + '<input type="text" id="spDpan" class="form-control wiz-input" value="4111111111111111" maxlength="19"></div>'
+        + '<input type="text" id="spDpan" class="form-control wiz-input" value="4111111111111111" maxlength="19" style="border-color:#1428A033;"></div>'
         + '<div class="row g-3 mb-3">'
         + '<div class="col-6"><label class="wiz-field-label">Exp Month</label>'
-        + '<input type="text" id="spExpMonth" class="form-control wiz-input" value="12" maxlength="2"></div>'
+        + '<input type="text" id="spExpMonth" class="form-control wiz-input" value="12" maxlength="2" style="border-color:#1428A033;"></div>'
         + '<div class="col-6"><label class="wiz-field-label">Exp Year</label>'
-        + '<input type="text" id="spExpYear" class="form-control wiz-input" value="2028" maxlength="4"></div>'
+        + '<input type="text" id="spExpYear" class="form-control wiz-input" value="2028" maxlength="4" style="border-color:#1428A033;"></div>'
         + '</div>'
         + '<div class="mb-3"><label class="wiz-field-label">Cryptogram <span class="text-danger">*</span></label>'
-        + '<input type="text" id="spCryptogram" class="form-control wiz-input" value="EHuWW9PiBkWvqE5juRwDzAUFBAk=" placeholder="Base64 cryptogram"></div>'
+        + '<input type="text" id="spCryptogram" class="form-control wiz-input" value="EHuWW9PiBkWvqE5juRwDzAUFBAk=" placeholder="Base64 cryptogram" style="border-color:#1428A033;"></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Card Type</label>'
-        + '<select id="spCardType" class="form-select wiz-input">'
+        + '<select id="spCardType" class="form-select wiz-input" style="border-color:#1428A033;">'
         + '<option value="001">Visa</option>'
         + '<option value="002">Mastercard</option>'
         + '<option value="003">Amex</option>'
         + '</select></div>'
-        + '<button class="wiz-btn w-100" id="spBtn" onclick="submitSamsungPay()">'
+        + '<button class="w-100 border-0 py-2 rounded-2 fw-bold" id="spBtn" onclick="submitSamsungPay()" style="background:#1428A0;color:#fff;font-size:.95rem;">'
         + '<i class="bi bi-phone me-2"></i>Pay with Samsung Pay</button>'
         + '<div id="spResult" class="mt-3" style="display:none;"></div>'
         + '</div>';
 }
 
 function submitSamsungPay() {
+    if (getCartCount() === 0) {
+        var el = document.getElementById('spResult');
+        el.style.display = 'block';
+        el.innerHTML = '<div class="alert alert-warning">Your cart is empty. Please add items before paying.</div>';
+        return;
+    }
+
     var btn = document.getElementById('spBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing Samsung Pay...';
@@ -739,16 +804,36 @@ function submitSamsungPay() {
     };
 
     callApi('/api/samsung-pay', 'POST', req).then(function(result) {
-        var el = document.getElementById('spResult');
-        el.style.display = 'block';
         if (result.ok) {
-            el.innerHTML = '<div class="alert alert-success">'
-                + '<strong>' + esc(result.data.status) + '</strong> — ' + esc(result.data.message)
-                + (result.data.transactionId ? '<br><small>Transaction: ' + esc(result.data.transactionId) + '</small>' : '')
-                + '</div>';
-            btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Payment Complete';
+            clearCart();
+            var now = new Date();
+            var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+            var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+            var ref = (result.data.transactionId || '').slice(-8).toUpperCase();
+
+            document.getElementById('sidebarContent').innerHTML =
+                '<div class="text-center py-3">'
+                + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
+                + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
+                + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
+                + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase!</p>'
+                + '</div>'
+                + '<div class="wiz-card mt-2">'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + fmt(req.amount) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
+                + '<hr><div class="d-flex align-items-center gap-3">'
+                + '<div style="font-size:1.4rem;color:#1428A0;"><i class="bi bi-phone"></i></div>'
+                + '<div><div class="fw-semibold" style="font-size:.9rem;color:#1428A0;">Samsung Pay</div></div></div>'
+                + '</div>'
+                + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
+                + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
         } else {
-            el.innerHTML = '<div class="alert alert-danger"><strong>Error</strong> — ' + esc(result.data.message || 'Unknown error') + '</div>';
+            var el = document.getElementById('spResult');
+            el.style.display = 'block';
+            el.innerHTML = '<div class="alert alert-danger"><strong>Payment Declined</strong><br>'
+                + esc(result.data.message || 'Your payment could not be processed. Please try again.') + '</div>';
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-phone me-2"></i>Pay with Samsung Pay';
         }
