@@ -139,6 +139,7 @@ function callApi(url, method, body) {
     var opts = { method: method, headers: { 'Content-Type': 'application/json' } };
     if (body) opts.body = JSON.stringify(body);
     return fetch(url, opts).then(function(res) {
+        if (res.status === 204) return { ok: true, data: {} };
         return res.json().then(function(data) { return { ok: res.ok, data: data }; });
     }).catch(function(err) { return { ok: false, data: { status: 'ERROR', message: err.message } }; });
 }
@@ -181,13 +182,282 @@ function renderOrderSummary() {
 
 // --- Saved Card (Tokenized Payments) ---
 
+var _rawCardNumber = '';
+
+function getSavedCustomerId() { return localStorage.getItem('cybershop_customerId'); }
+function setSavedCustomerId(id) { localStorage.setItem('cybershop_customerId', id); }
+
+var _savedCards = [];
+var _selectedCardIndex = -1;
+
+function cardBrand(type) {
+    if (!type) return { name: 'Card', icon: 'bi-credit-card', color: '#6c757d', bg: '#f8f9fa' };
+    var t = type.toLowerCase();
+    if (t === 'visa' || t === '001') return { name: 'Visa', icon: 'bi-credit-card', color: '#1a1f71', bg: '#eef0ff' };
+    if (t === 'mastercard' || t === '002') return { name: 'Mastercard', icon: 'bi-credit-card-2-front', color: '#eb001b', bg: '#fff0f0' };
+    if (t === 'amex' || t === '003') return { name: 'Amex', icon: 'bi-credit-card-2-back', color: '#006fcf', bg: '#eef6ff' };
+    return { name: type, icon: 'bi-credit-card', color: '#6c757d', bg: '#f8f9fa' };
+}
+
+function maskCardDisplay(raw) {
+    var digits = raw.replace(/\D/g, '');
+    if (digits.length <= 4) return digits;
+    var masked = '';
+    for (var i = 0; i < digits.length - 4; i++) masked += '\u2022';
+    masked += digits.slice(-4);
+    return masked.replace(/(.{4})/g, '$1 ').trim();
+}
+
+function onCardNumberInput(el) {
+    var cursorPos = el.selectionStart;
+    var oldLen = el.value.length;
+    var raw = el.value.replace(/\D/g, '');
+    if (raw.length > 16) raw = raw.slice(0, 16);
+    _rawCardNumber = raw;
+    el.value = maskCardDisplay(raw);
+    var newLen = el.value.length;
+    var newPos = cursorPos + (newLen - oldLen);
+    el.setSelectionRange(newPos, newPos);
+}
+
+// Always show card list first — even if empty
 function renderTokenForm() {
-    return '<div class="wiz-card">'
-        + '<div class="wiz-label">SAVED CARD — STORE &amp; PAY</div>'
-        + '<p class="text-muted" style="font-size:.9rem;">Step 1: Store your card securely. Step 2: Pay using the stored token.</p>'
+    return '<div id="savedCardRoot">'
+        + '<div class="wiz-card">'
+        + '<div class="wiz-label">YOUR SAVED CARDS</div>'
+        + '<p class="text-muted" style="font-size:.85rem;">Select a card to pay with</p>'
+        + '<div id="savedCardList"><div class="text-center my-4">'
+        + '<div class="spinner-border spinner-border-sm text-primary"></div>'
+        + '<p class="text-muted mt-2" style="font-size:.85rem;">Loading saved cards...</p></div></div>'
+        + '<button class="wiz-btn w-100 mt-3" id="proceedBtn" onclick="proceedWithCard()" disabled>'
+        + '<i class="bi bi-arrow-right me-2"></i>Proceed</button>'
+        + '<div class="d-flex gap-2 mt-2">'
+        + '<button class="btn btn-outline-primary flex-grow-1" onclick="showAddCardForm()">'
+        + '<i class="bi bi-plus-circle me-2"></i>Add New Card</button>'
+        + '<button class="btn btn-outline-danger flex-grow-0" id="deleteCardBtn" onclick="deleteSelectedCard()" disabled>'
+        + '<i class="bi bi-trash3"></i></button>'
+        + '</div>'
+        + '</div>'
+        + '</div>';
+}
+
+function initSavedCardView() {
+    var customerId = getSavedCustomerId();
+    if (!customerId) {
+        seedTestCards();
+        return;
+    }
+    fetchAndRenderCards(customerId);
+}
+
+function seedTestCards() {
+    var container = document.getElementById('savedCardList');
+    if (container) {
+        container.innerHTML = '<div class="text-center my-4">'
+            + '<div class="spinner-border spinner-border-sm text-primary"></div>'
+            + '<p class="text-muted mt-2" style="font-size:.85rem;">Loading saved cards...</p></div>';
+    }
+    callApi('/api/tokens/seed', 'POST').then(function(result) {
+        if (result.ok && result.data.customerId) {
+            setSavedCustomerId(result.data.customerId);
+            fetchAndRenderCards(result.data.customerId);
+        } else {
+            if (container) {
+                container.innerHTML = '<div class="text-center py-3">'
+                    + '<i class="bi bi-credit-card text-muted" style="font-size:2rem;"></i>'
+                    + '<p class="text-muted mt-2" style="font-size:.9rem;">No saved cards yet.</p>'
+                    + '</div>';
+            }
+        }
+    });
+}
+
+function fetchAndRenderCards(customerId) {
+    callApi('/api/tokens/customers/' + customerId + '/cards', 'GET').then(function(result) {
+        var container = document.getElementById('savedCardList');
+        if (!container) return;
+        if (!result.ok || !result.data || result.data.length === 0) {
+            container.innerHTML = '<div class="text-center py-3">'
+                + '<i class="bi bi-credit-card text-muted" style="font-size:2rem;"></i>'
+                + '<p class="text-muted mt-2" style="font-size:.9rem;">No saved cards yet.</p>'
+                + '</div>';
+            return;
+        }
+        renderCardList(result.data);
+    });
+}
+
+function renderCardList(cards) {
+    _savedCards = cards;
+    _selectedCardIndex = -1;
+    var container = document.getElementById('savedCardList');
+    if (!container) return;
+    var html = '';
+    for (var i = 0; i < cards.length; i++) {
+        var card = cards[i];
+        var suffix = card.cardSuffix || '****';
+        var b = cardBrand(card.cardType);
+        var expiry = (card.expirationMonth || '??') + '/' + (card.expirationYear || '????');
+        var name = ((card.firstName || '') + ' ' + (card.lastName || '')).trim() || 'Cardholder';
+
+        html += '<div class="saved-card-item d-flex align-items-center gap-3 mb-2 p-3 rounded-3" '
+            + 'id="cardItem' + i + '" '
+            + 'onclick="selectCard(' + i + ')" '
+            + 'style="background:' + b.bg + ';border:2px solid transparent;cursor:pointer;transition:border-color .2s;">'
+            + '<div class="flex-shrink-0" style="font-size:1.6rem;color:' + b.color + ';"><i class="bi ' + b.icon + '"></i></div>'
+            + '<div class="flex-grow-1">'
+            + '<div class="fw-bold" style="font-size:.9rem;color:' + b.color + ';">' + esc(b.name) + '</div>'
+            + '<div style="font-family:monospace;font-size:.95rem;letter-spacing:2px;">'
+            + '\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 ' + esc(suffix) + '</div>'
+            + '<div class="text-muted" style="font-size:.8rem;">' + esc(name) + ' &middot; Exp ' + esc(expiry) + '</div>'
+            + '</div>'
+            + '<div class="flex-shrink-0">'
+            + '<div class="card-radio" id="cardRadio' + i + '" style="width:22px;height:22px;border-radius:50%;border:2px solid #ccc;display:flex;align-items:center;justify-content:center;">'
+            + '</div></div>'
+            + '</div>';
+    }
+    container.innerHTML = html;
+
+    // Update proceed button state
+    var proceedBtn = document.getElementById('proceedBtn');
+    if (proceedBtn) proceedBtn.disabled = true;
+}
+
+function selectCard(index) {
+    _selectedCardIndex = index;
+    var items = document.querySelectorAll('.saved-card-item');
+    for (var i = 0; i < items.length; i++) {
+        var b = cardBrand(_savedCards[i].cardType);
+        items[i].style.borderColor = (i === index) ? b.color : 'transparent';
+        var radio = document.getElementById('cardRadio' + i);
+        if (radio) {
+            if (i === index) {
+                radio.style.borderColor = b.color;
+                radio.innerHTML = '<div style="width:12px;height:12px;border-radius:50%;background:' + b.color + ';"></div>';
+            } else {
+                radio.style.borderColor = '#ccc';
+                radio.innerHTML = '';
+            }
+        }
+    }
+    var proceedBtn = document.getElementById('proceedBtn');
+    if (proceedBtn) proceedBtn.disabled = false;
+    var deleteBtn = document.getElementById('deleteCardBtn');
+    if (deleteBtn) deleteBtn.disabled = false;
+}
+
+function proceedWithCard() {
+    if (_selectedCardIndex < 0 || _selectedCardIndex >= _savedCards.length) return;
+    var card = _savedCards[_selectedCardIndex];
+    var b = cardBrand(card.cardType);
+    var suffix = card.cardSuffix || '****';
+    var expiry = (card.expirationMonth || '??') + '/' + (card.expirationYear || '????');
+    var name = ((card.firstName || '') + ' ' + (card.lastName || '')).trim() || 'Cardholder';
+
+    var root = document.getElementById('savedCardRoot');
+    if (!root) root = document.getElementById('sidebarContent');
+
+    root.innerHTML = '<div class="wiz-card">'
+        + '<div class="wiz-label">CONFIRM PAYMENT</div>'
+        // Selected card summary
+        + '<div class="p-3 rounded-3 mb-3" style="background:' + b.bg + ';border:2px solid ' + b.color + ';">'
+        + '<div class="d-flex align-items-center gap-3">'
+        + '<div style="font-size:2rem;color:' + b.color + ';"><i class="bi ' + b.icon + '"></i></div>'
+        + '<div>'
+        + '<div class="fw-bold" style="color:' + b.color + ';">' + esc(b.name) + '</div>'
+        + '<div style="font-family:monospace;font-size:1rem;letter-spacing:2px;">'
+        + '\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 ' + esc(suffix) + '</div>'
+        + '</div></div></div>'
+        // Cardholder details
+        + '<div class="wiz-label" style="font-size:.75rem;">CARDHOLDER DETAILS</div>'
+        + '<div class="mb-3">'
+        + '<div class="d-flex justify-content-between mb-1"><span class="text-muted">Name</span><span class="fw-semibold">' + esc(name) + '</span></div>'
+        + '<div class="d-flex justify-content-between mb-1"><span class="text-muted">Card</span><span class="fw-semibold">' + esc(b.name) + ' ending in ' + esc(suffix) + '</span></div>'
+        + '<div class="d-flex justify-content-between mb-1"><span class="text-muted">Expiry</span><span class="fw-semibold">' + esc(expiry) + '</span></div>'
+        + '</div>'
+        + '<hr>'
+        // Amount
+        + '<div class="d-flex justify-content-between mb-1"><span class="text-muted">Subtotal</span><span>' + fmt(getSubtotal()) + '</span></div>'
+        + '<div class="d-flex justify-content-between mb-1"><span class="text-muted">VAT (15%)</span><span>' + fmt(getTax()) + '</span></div>'
+        + '<div class="d-flex justify-content-between fw-bold fs-5 mt-2 mb-3"><span>Total</span><span style="color:var(--cs-primary);">' + fmt(getTotal()) + '</span></div>'
+        // Buttons
+        + '<button class="wiz-btn w-100" id="completePayBtn" onclick="completeCardPayment()">'
+        + '<i class="bi bi-lock me-2"></i>Complete Transaction</button>'
+        + '<div id="paymentResult" class="mt-3" style="display:none;"></div>'
+        + '<button class="btn btn-outline-secondary w-100 mt-2" onclick="backToCardList()">'
+        + '<i class="bi bi-arrow-left me-2"></i>Back to Cards</button>'
+        + '</div>';
+}
+
+function completeCardPayment() {
+    var customerId = getSavedCustomerId();
+    if (!customerId || _selectedCardIndex < 0) return;
+
+    var card = _savedCards[_selectedCardIndex];
+    var b = cardBrand(card.cardType);
+    var suffix = card.cardSuffix || '****';
+    var name = ((card.firstName || '') + ' ' + (card.lastName || '')).trim() || 'Cardholder';
+    var total = getTotal();
+
+    var btn = document.getElementById('completePayBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing payment...';
+
+    callApi('/api/tokens/pay', 'POST', {
+        customerId: customerId,
+        amount: parseFloat(total.toFixed(2)),
+        currency: 'ZAR'
+    }).then(function(result) {
+        if (result.ok) {
+            var now = new Date();
+            var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+            var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+            var ref = (result.data.transactionId || '').slice(-8).toUpperCase();
+
+            var root = document.getElementById('savedCardRoot');
+            if (!root) root = document.getElementById('sidebarContent');
+
+            root.innerHTML = '<div class="text-center py-3">'
+                + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
+                + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
+                + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
+                + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase, ' + esc(name.split(' ')[0]) + '!</p>'
+                + '</div>'
+                + '<div class="wiz-card mt-2">'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + fmt(total) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
+                + '<hr>'
+                + '<div class="d-flex align-items-center gap-3">'
+                + '<div style="font-size:1.4rem;color:' + b.color + ';"><i class="bi ' + b.icon + '"></i></div>'
+                + '<div>'
+                + '<div class="fw-semibold" style="font-size:.9rem;color:' + b.color + ';">' + esc(b.name) + ' ending in ' + esc(suffix) + '</div>'
+                + '<div class="text-muted" style="font-size:.8rem;">' + esc(name) + '</div>'
+                + '</div></div>'
+                + '</div>'
+                + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
+                + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
+        } else {
+            var el = document.getElementById('paymentResult');
+            el.style.display = 'block';
+            el.innerHTML = '<div class="alert alert-danger"><strong>Payment Declined</strong><br>'
+                + esc(result.data.message || 'Your payment could not be processed. Please try again or use a different card.') + '</div>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-lock me-2"></i>Complete Transaction';
+        }
+    });
+}
+
+function showAddCardForm() {
+    var root = document.getElementById('savedCardRoot');
+    if (!root) root = document.getElementById('sidebarContent');
+    root.innerHTML = '<div class="wiz-card">'
+        + '<div class="wiz-label">ADD NEW CARD</div>'
+        + '<p class="text-muted" style="font-size:.9rem;">Your card will be securely tokenized. We never store full card numbers.</p>'
         + '<div class="row g-3 mb-3">'
         + '<div class="col-12"><label class="wiz-field-label">Card Number <span class="text-danger">*</span></label>'
-        + '<input type="text" id="tokCardNumber" class="form-control wiz-input" placeholder="4111 1111 1111 1111" maxlength="19"></div>'
+        + '<input type="text" id="tokCardNumber" class="form-control wiz-input" placeholder="\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022" maxlength="23" oninput="onCardNumberInput(this)" autocomplete="off"></div>'
         + '</div>'
         + '<div class="row g-3 mb-3">'
         + '<div class="col-4"><label class="wiz-field-label">Exp Month</label>'
@@ -195,7 +465,7 @@ function renderTokenForm() {
         + '<div class="col-4"><label class="wiz-field-label">Exp Year</label>'
         + '<input type="text" id="tokExpYear" class="form-control wiz-input" placeholder="2028" maxlength="4"></div>'
         + '<div class="col-4"><label class="wiz-field-label">CVV</label>'
-        + '<input type="text" id="tokCvv" class="form-control wiz-input" placeholder="123" maxlength="4"></div>'
+        + '<input type="password" id="tokCvv" class="form-control wiz-input" placeholder="\u2022\u2022\u2022" maxlength="4"></div>'
         + '</div>'
         + '<div class="row g-3 mb-3">'
         + '<div class="col-6"><label class="wiz-field-label">First Name <span class="text-danger">*</span></label>'
@@ -205,19 +475,38 @@ function renderTokenForm() {
         + '</div>'
         + '<div class="mb-3"><label class="wiz-field-label">Email <span class="text-danger">*</span></label>'
         + '<input type="email" id="tokEmail" class="form-control wiz-input" placeholder="john@example.com"></div>'
-        + '<button class="wiz-btn w-100" id="tokenStoreBtn" onclick="submitTokenStore()">'
-        + '<i class="bi bi-shield-check me-2"></i>Store Card &amp; Pay</button>'
+        + '<button class="wiz-btn w-100" id="tokenStoreBtn" onclick="submitAddCard()">'
+        + '<i class="bi bi-shield-check me-2"></i>Save Card</button>'
         + '<div id="tokenResult" class="mt-3" style="display:none;"></div>'
+        + '<button class="btn btn-outline-secondary w-100 mt-2" onclick="backToCardList()">'
+        + '<i class="bi bi-arrow-left me-2"></i>Back to Cards</button>'
         + '</div>';
+    _rawCardNumber = '';
 }
 
-function submitTokenStore() {
+function backToCardList() {
+    var root = document.getElementById('savedCardRoot');
+    if (!root) root = document.getElementById('sidebarContent');
+    root.innerHTML = '<div id="savedCardRoot">'
+        + '<div class="wiz-card">'
+        + '<div class="wiz-label">YOUR SAVED CARDS</div>'
+        + '<div id="savedCardList"><div class="text-center my-4">'
+        + '<div class="spinner-border spinner-border-sm text-primary"></div>'
+        + '</div></div>'
+        + '</div>'
+        + '<button class="btn btn-outline-primary w-100 mt-3" onclick="showAddCardForm()">'
+        + '<i class="bi bi-plus-circle me-2"></i>Add New Card</button>'
+        + '</div>';
+    initSavedCardView();
+}
+
+function submitAddCard() {
     var btn = document.getElementById('tokenStoreBtn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Storing card...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving card...';
 
     var req = {
-        cardNumber: document.getElementById('tokCardNumber').value.trim(),
+        cardNumber: _rawCardNumber,
         expirationMonth: document.getElementById('tokExpMonth').value.trim(),
         expirationYear: document.getElementById('tokExpYear').value.trim(),
         securityCode: document.getElementById('tokCvv').value.trim(),
@@ -227,38 +516,36 @@ function submitTokenStore() {
     };
 
     callApi('/api/tokens/customers', 'POST', req).then(function(result) {
+        var el = document.getElementById('tokenResult');
+        el.style.display = 'block';
         if (result.ok && result.data.transactionId) {
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Charging token...';
-            var customerId = result.data.transactionId;
-            return callApi('/api/tokens/pay', 'POST', {
-                customerId: customerId,
-                amount: parseFloat(getTotal().toFixed(2)),
-                currency: 'ZAR'
-            }).then(function(payResult) {
-                showTokenResult(payResult, customerId);
-            });
+            setSavedCustomerId(result.data.transactionId);
+            el.innerHTML = '<div class="alert alert-success">'
+                + '<i class="bi bi-check-circle me-2"></i>Card saved securely.</div>';
+            _rawCardNumber = '';
+            setTimeout(function() { backToCardList(); }, 1000);
         } else {
-            showTokenResult(result, null);
+            el.innerHTML = '<div class="alert alert-danger"><strong>Error</strong> — '
+                + esc(result.data.message || 'Unknown error') + '</div>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-shield-check me-2"></i>Save Card';
         }
     });
 }
 
-function showTokenResult(result, customerId) {
-    var el = document.getElementById('tokenResult');
-    el.style.display = 'block';
-    var btn = document.getElementById('tokenStoreBtn');
-    if (result.ok) {
-        el.innerHTML = '<div class="alert alert-success">'
-            + '<strong>' + esc(result.data.status) + '</strong> — ' + esc(result.data.message)
-            + (result.data.transactionId ? '<br><small>Transaction: ' + esc(result.data.transactionId) + '</small>' : '')
-            + (customerId ? '<br><small>Customer ID: ' + esc(customerId) + '</small>' : '')
-            + '</div>';
-        btn.innerHTML = '<i class="bi bi-check-circle me-2"></i>Payment Complete';
-    } else {
-        el.innerHTML = '<div class="alert alert-danger"><strong>Error</strong> — ' + esc(result.data.message || 'Unknown error') + '</div>';
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-shield-check me-2"></i>Store Card &amp; Pay';
-    }
+function deleteSelectedCard() {
+    if (_selectedCardIndex < 0 || _selectedCardIndex >= _savedCards.length) return;
+    var card = _savedCards[_selectedCardIndex];
+    var customerId = getSavedCustomerId();
+    if (!customerId || !card.paymentInstrumentId) return;
+
+    var btn = document.getElementById('deleteCardBtn');
+    btn.disabled = true;
+
+    callApi('/api/tokens/customers/' + customerId + '/cards/' + card.paymentInstrumentId, 'DELETE').then(function() {
+        _selectedCardIndex = -1;
+        backToCardList();
+    });
 }
 
 // --- Pay by Invoice ---

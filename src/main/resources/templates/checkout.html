@@ -2,36 +2,6 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments/layout :: head('Checkout — CyberShop')}"></head>
 <head>
-    <style>
-        /* Confirmation modal */
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1060;
-            left: 0; top: 0;
-            width: 100%; height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 15% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%; max-width: 500px;
-            border-radius: 5px;
-            font-family: Arial, sans-serif;
-        }
-        .close {
-            color: #aaa; float: right;
-            font-size: 28px; font-weight: bold; cursor: pointer;
-        }
-        .close:hover, .close:focus { color: black; text-decoration: none; }
-        .payment-success { color: #28a745; font-size: 24px; margin-bottom: 20px; text-align: center; }
-        .payment-details { margin-bottom: 20px; }
-        .payment-details h3 { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
-        .payment-details p { margin: 5px 0; }
-    </style>
     <!-- Unified Checkout Library -->
     <script th:src="${clientLibrary}"
             th:integrity="${clientLibraryIntegrity}"
@@ -102,23 +72,7 @@
     </div>
 </div>
 
-<!-- Payment Confirmation Modal -->
-<div id="paymentModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <div class="payment-success">
-            <h2>Payment Successful!</h2>
-        </div>
-        <div class="payment-details">
-            <h3>Payment Details</h3>
-            <p><strong>Status:</strong> <span id="paymentStatus"></span></p>
-            <p><strong>Message:</strong> <span id="paymentMessage"></span></p>
-            <p><strong>Transaction ID:</strong> <span id="transactionId"></span></p>
-            <p><strong>Amount:</strong> <span id="paymentAmount"></span></p>
-            <p><strong>Currency:</strong> <span id="paymentCurrency"></span></p>
-        </div>
-    </div>
-</div>
+<!-- Payment Confirmation Modal (no longer used — confirmation rendered in sidebar) -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/js/store.js"></script>
@@ -143,37 +97,70 @@
         }
     }
 
-    // Show payment confirmation modal
-    function showPaymentModal(paymentDetails) {
-        var modal = document.getElementById("paymentModal");
-
-        document.getElementById("paymentStatus").textContent = paymentDetails.status || paymentDetails.outcome || "COMPLETED";
-        document.getElementById("paymentMessage").textContent = paymentDetails.message || "Transaction processed";
-
-        var transactionId = paymentDetails.details &&
+    // Show payment confirmation in sidebar (same style as saved card)
+    function showPaymentConfirmation(paymentDetails) {
+        var transactionId = (paymentDetails.details &&
             paymentDetails.details.processorInformation &&
-            paymentDetails.details.processorInformation.transactionId ||
-            paymentDetails.id || "N/A";
-        document.getElementById("transactionId").textContent = transactionId;
+            paymentDetails.details.processorInformation.transactionId) ||
+            paymentDetails.id || '';
+        var ref = transactionId.slice(-8).toUpperCase();
 
+        var amount = '';
+        var currency = 'ZAR';
         if (paymentDetails.details &&
             paymentDetails.details.orderInformation &&
             paymentDetails.details.orderInformation.amountDetails) {
-            var amountDetails = paymentDetails.details.orderInformation.amountDetails;
-            document.getElementById("paymentAmount").textContent = amountDetails.totalAmount || amountDetails.authorizedAmount || "N/A";
-            document.getElementById("paymentCurrency").textContent = amountDetails.currency || "ZAR";
-        } else {
-            document.getElementById("paymentAmount").textContent = "N/A";
-            document.getElementById("paymentCurrency").textContent = "N/A";
+            var ad = paymentDetails.details.orderInformation.amountDetails;
+            amount = ad.totalAmount || ad.authorizedAmount || '';
+            currency = ad.currency || 'ZAR';
+        }
+        var displayAmount = amount ? (currency === 'ZAR' ? 'R' : currency + ' ') + parseFloat(amount).toFixed(2) : fmt(getTotal());
+
+        // Try to extract card info from payment details
+        var cardNumber = '';
+        var cardType = '';
+        if (paymentDetails.details &&
+            paymentDetails.details.paymentInformation &&
+            paymentDetails.details.paymentInformation.tokenizedCard) {
+            var tc = paymentDetails.details.paymentInformation.tokenizedCard;
+            cardNumber = tc.suffix || '';
+            cardType = tc.type || '';
+        } else if (paymentDetails.details &&
+            paymentDetails.details.paymentInformation &&
+            paymentDetails.details.paymentInformation.card) {
+            var c = paymentDetails.details.paymentInformation.card;
+            cardNumber = c.suffix || '';
+            cardType = c.type || '';
         }
 
-        modal.style.display = "block";
+        var b = { name: 'Card', icon: 'bi-credit-card', color: '#1a1f71' };
+        if (cardType === '001' || cardType.toLowerCase() === 'visa') b = { name: 'Visa', icon: 'bi-credit-card', color: '#1a1f71' };
+        else if (cardType === '002' || cardType.toLowerCase() === 'mastercard') b = { name: 'Mastercard', icon: 'bi-credit-card-2-front', color: '#eb001b' };
+        else if (cardType === '003' || cardType.toLowerCase() === 'amex') b = { name: 'Amex', icon: 'bi-credit-card-2-back', color: '#006fcf' };
 
-        var span = document.getElementsByClassName("close")[0];
-        span.onclick = function() { modal.style.display = "none"; };
-        window.onclick = function(event) {
-            if (event.target == modal) modal.style.display = "none";
-        };
+        var now = new Date();
+        var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+        var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+
+        document.getElementById('paymentSidebarLabel').textContent = 'Payment Complete';
+        document.getElementById('sidebarContent').innerHTML =
+            '<div class="text-center py-3">'
+            + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
+            + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
+            + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
+            + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase!</p>'
+            + '</div>'
+            + '<div class="wiz-card mt-2">'
+            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + displayAmount + '</span></div>'
+            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
+            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
+            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
+            + (cardNumber ? '<hr><div class="d-flex align-items-center gap-3">'
+                + '<div style="font-size:1.4rem;color:' + b.color + ';"><i class="bi ' + b.icon + '"></i></div>'
+                + '<div><div class="fw-semibold" style="font-size:.9rem;color:' + b.color + ';">' + esc(b.name) + ' ending in ' + esc(cardNumber) + '</div></div></div>' : '')
+            + '</div>'
+            + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
+            + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
     }
 
     // Initialize UC widget inside the sidebar
@@ -203,8 +190,7 @@
                 var completeResponse = await up.complete(tt);
                 var parsed = parseJwt(completeResponse);
                 if (parsed) {
-                    sidebar.hide();
-                    showPaymentModal(parsed);
+                    showPaymentConfirmation(parsed);
                 }
             } catch (error) {
                 console.error("UC payment error:", error);
@@ -313,6 +299,8 @@
 
         document.getElementById('paymentSidebarLabel').textContent = titles[method];
         document.getElementById('sidebarContent').innerHTML = renderers[method]();
+
+        if (method === 'token') initSavedCardView();
 
         var sidebar = bootstrap.Offcanvas.getOrCreateInstance(
             document.getElementById('paymentSidebar'));
