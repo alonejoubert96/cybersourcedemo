@@ -43,11 +43,13 @@ public class TokenController {
         return ResponseEntity.noContent().build();
     }
 
+    @SuppressWarnings("unchecked")
     @PostMapping("/pay")
     public ResponseEntity<PaymentResponse> payWithToken(@RequestBody Map<String, Object> body) {
         String customerId = (String) body.get("customerId");
         double amount = ((Number) body.getOrDefault("amount", 25.00)).doubleValue();
         String currency = (String) body.getOrDefault("currency", "ZAR");
-        return ResponseEntity.ok(tokenizedPaymentService.payWithToken(customerId, amount, currency));
+        Map<String, String> threeDsData = (Map<String, String>) body.get("threeDsData");
+        return ResponseEntity.ok(tokenizedPaymentService.payWithToken(customerId, amount, currency, threeDsData));
     }
 }

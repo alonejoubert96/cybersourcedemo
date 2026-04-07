@@ -6,6 +6,8 @@
     <script th:src="${clientLibrary}"
             th:integrity="${clientLibraryIntegrity}"
             crossorigin="anonymous"></script>
+    <!-- Flex Microform v2 (tokenized card entry) -->
+    <script src="https://testflex.cybersource.com/microform/bundle/v2.0/flex-microform.min.js"></script>
 </head>
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
@@ -34,6 +36,10 @@
     <div class="wiz-card">
         <div class="wiz-label">OTHER PAYMENT OPTIONS</div>
         <div class="payment-method-list">
+            <div class="payment-method-item" onclick="openCustomSidebar('tokenizedCheckout')">
+                <div class="method-icon"><i class="bi bi-credit-card-2-front"></i></div>
+                <div class="method-label">Tokenized Card</div>
+            </div>
             <div class="payment-method-item" onclick="openCustomSidebar('paymentLink')">
                 <div class="method-icon"><i class="bi bi-link-45deg"></i></div>
                 <div class="method-label">Payment Link</div>
@@ -56,6 +62,30 @@
     <!-- Hidden inputs for UC -->
     <input type="hidden" id="transientToken" name="transientToken" />
     <input type="hidden" id="jwt" th:value="${jwt}" />
+</div>
+
+<!-- 3DS Device Data Collection (hidden) -->
+<iframe id="cardinal_collection_iframe" name="collectionIframe" height="10" width="10" style="display:none;"></iframe>
+<form id="cardinal_collection_form" method="POST" target="collectionIframe" action="">
+    <input id="cardinal_collection_form_input" type="hidden" name="JWT" value="">
+</form>
+
+<!-- 3DS Challenge Modal -->
+<div class="modal fade" id="threeDsModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:520px;">
+        <div class="modal-content" style="border-radius:12px;overflow:hidden;">
+            <div class="modal-header" style="background:#1a1f71;color:#fff;border:none;">
+                <h6 class="modal-title"><i class="bi bi-shield-lock me-2"></i>Bank Verification Required</h6>
+            </div>
+            <div class="modal-body p-0" style="min-height:420px;">
+                <iframe id="step-up-iframe" name="step-up-iframe" style="width:100%;height:420px;border:none;"></iframe>
+                <form id="step-up-form" target="step-up-iframe" method="POST" action="">
+                    <input type="hidden" name="JWT" id="step-up-jwt" value="">
+                    <input type="hidden" name="MD" id="step-up-md" value="">
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Payment Sidebar (Bootstrap Offcanvas) -->
@@ -191,19 +221,22 @@
             token: 'Saved Card',
             invoice: 'Pay by Invoice',
             paymentLink: 'Payment Link',
-            samsungPay: 'Samsung Pay'
+            samsungPay: 'Samsung Pay',
+            tokenizedCheckout: 'Tokenized Card'
         };
         var renderers = {
             token: renderTokenForm,
             invoice: renderInvoiceForm,
             paymentLink: renderPaymentLinkForm,
-            samsungPay: renderSamsungPayForm
+            samsungPay: renderSamsungPayForm,
+            tokenizedCheckout: renderTokenizedCheckoutForm
         };
 
         document.getElementById('paymentSidebarLabel').textContent = titles[method];
         document.getElementById('sidebarContent').innerHTML = renderers[method]();
 
         if (method === 'token') initSavedCardView();
+        if (method === 'tokenizedCheckout') initFlexMicroform();
 
         var sidebar = bootstrap.Offcanvas.getOrCreateInstance(
             document.getElementById('paymentSidebar'));

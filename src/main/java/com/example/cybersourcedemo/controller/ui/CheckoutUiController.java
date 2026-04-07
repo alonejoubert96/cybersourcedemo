@@ -12,6 +12,8 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -62,8 +64,21 @@ public class CheckoutUiController {
         return "cart";
     }
 
+    /**
+     * 3DS Step-Up callback — Cardinal POSTs here after challenge completion.
+     * Renders a tiny page that posts a message to the parent window.
+     */
+    @PostMapping("/3ds/callback")
+    public String threeDsCallback(@RequestParam(value = "TransactionId", required = false) String transactionId,
+                                  @RequestParam(value = "MD", required = false) String md,
+                                  Model model) {
+        model.addAttribute("transactionId", transactionId != null ? transactionId : "");
+        model.addAttribute("md", md != null ? md : "");
+        return "3ds-callback";
+    }
+
     @GetMapping("/checkout")
-    public String checkout(@org.springframework.web.bind.annotation.RequestParam(value = "amount", required = false) String amount,
+    public String checkout(@RequestParam(value = "amount", required = false) String amount,
                            Model model) {
         try {
             // Override the amount in the payload if provided from the cart

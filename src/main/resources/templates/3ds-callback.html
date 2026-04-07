@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head><title>3DS Callback</title></head>
+<body>
+<script th:inline="javascript">
+    // Cardinal posts back here after the cardholder completes (or cancels) the challenge.
+    // We relay the TransactionId to the parent checkout page via postMessage.
+    var transactionId = /*[[${transactionId}]]*/ '';
+    var md = /*[[${md}]]*/ '';
+    window.parent.postMessage({
+        type: '3ds-challenge-complete',
+        transactionId: transactionId,
+        md: md
+    }, window.location.origin);
+</script>
+</body>
+</html>
