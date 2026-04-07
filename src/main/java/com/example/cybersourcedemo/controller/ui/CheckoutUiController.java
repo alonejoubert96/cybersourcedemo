@@ -11,9 +11,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -75,6 +77,40 @@ public class CheckoutUiController {
         model.addAttribute("transactionId", transactionId != null ? transactionId : "");
         model.addAttribute("md", md != null ? md : "");
         return "3ds-callback";
+    }
+
+    /**
+     * Returns a UC capture context with only PANENTRY (card-only, no Click to Pay or wallets).
+     */
+    @PostMapping("/api/card-only/capture-context")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> cardOnlyCaptureContext(@org.springframework.web.bind.annotation.RequestBody(required = false) Map<String, String> body) {
+        try {
+            String amount = (body != null && body.get("amount") != null) ? body.get("amount") : "0.01";
+
+            ObjectNode payloadCopy = (ObjectNode) objectMapper.readTree(requestData.getPayload());
+
+            // Override to PANENTRY only
+            payloadCopy.putArray("allowedPaymentTypes").add("PANENTRY");
+
+            // Set amount
+            ((ObjectNode) payloadCopy.path("orderInformation").path("amountDetails"))
+                    .put("totalAmount", amount);
+
+            RequestData cardOnlyRequest = new RequestData(
+                    objectMapper.writeValueAsString(payloadCopy), requestData.getHeaders());
+
+            String jwt = captureContextService.getCaptureContext(cardOnlyRequest);
+            Map<String, String> jwtDetails = jwtProcessorService.processAndPrintJwt(jwt);
+
+            return ResponseEntity.ok(Map.of(
+                    "jwt", jwt,
+                    "clientLibrary", jwtDetails.get("clientLibrary"),
+                    "clientLibraryIntegrity", jwtDetails.get("clientLibraryIntegrity")
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
     }
 
     @GetMapping("/checkout")

@@ -6,8 +6,6 @@
     <script th:src="${clientLibrary}"
             th:integrity="${clientLibraryIntegrity}"
             crossorigin="anonymous"></script>
-    <!-- Flex Microform v2 (tokenized card entry) -->
-    <script src="https://testflex.cybersource.com/microform/bundle/v2.0/flex-microform.min.js"></script>
 </head>
 <body>
 <nav th:replace="~{fragments/layout :: navbar}"></nav>
@@ -36,6 +34,10 @@
     <div class="wiz-card">
         <div class="wiz-label">OTHER PAYMENT OPTIONS</div>
         <div class="payment-method-list">
+            <div class="payment-method-item" onclick="openCustomSidebar('cardOnly')">
+                <div class="method-icon"><i class="bi bi-credit-card"></i></div>
+                <div class="method-label">Pay with Card</div>
+            </div>
             <div class="payment-method-item" onclick="openCustomSidebar('tokenizedCheckout')">
                 <div class="method-icon"><i class="bi bi-credit-card-2-front"></i></div>
                 <div class="method-label">Tokenized Card</div>
@@ -218,6 +220,7 @@
         ucSidebarPending = false;
 
         var titles = {
+            cardOnly: 'Pay with Card',
             token: 'Saved Card',
             invoice: 'Pay by Invoice',
             paymentLink: 'Payment Link',
@@ -225,6 +228,7 @@
             tokenizedCheckout: 'Tokenized Card'
         };
         var renderers = {
+            cardOnly: renderCardOnlyForm,
             token: renderTokenForm,
             invoice: renderInvoiceForm,
             paymentLink: renderPaymentLinkForm,
@@ -235,6 +239,7 @@
         document.getElementById('paymentSidebarLabel').textContent = titles[method];
         document.getElementById('sidebarContent').innerHTML = renderers[method]();
 
+        if (method === 'cardOnly') initCardOnlyWidget();
         if (method === 'token') initSavedCardView();
         if (method === 'tokenizedCheckout') initFlexMicroform();
 

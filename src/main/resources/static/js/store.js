@@ -182,7 +182,6 @@ function renderOrderSummary() {
 
 // --- Saved Card (Tokenized Payments) ---
 
-var _rawCardNumber = '';
 
 function getSavedCustomerId() { return localStorage.getItem('cybershop_customerId'); }
 function setSavedCustomerId(id) { localStorage.setItem('cybershop_customerId', id); }
@@ -199,26 +198,6 @@ function cardBrand(type) {
     return { name: type, icon: 'bi-credit-card', color: '#6c757d', bg: '#f8f9fa' };
 }
 
-function maskCardDisplay(raw) {
-    var digits = raw.replace(/\D/g, '');
-    if (digits.length <= 4) return digits;
-    var masked = '';
-    for (var i = 0; i < digits.length - 4; i++) masked += '\u2022';
-    masked += digits.slice(-4);
-    return masked.replace(/(.{4})/g, '$1 ').trim();
-}
-
-function onCardNumberInput(el) {
-    var cursorPos = el.selectionStart;
-    var oldLen = el.value.length;
-    var raw = el.value.replace(/\D/g, '');
-    if (raw.length > 16) raw = raw.slice(0, 16);
-    _rawCardNumber = raw;
-    el.value = maskCardDisplay(raw);
-    var newLen = el.value.length;
-    var newPos = cursorPos + (newLen - oldLen);
-    el.setSelectionRange(newPos, newPos);
-}
 
 // Always show card list first — even if empty
 function renderTokenForm() {
@@ -228,7 +207,7 @@ function renderTokenForm() {
         + '<div style="width:40px;height:40px;border-radius:8px;background:#1a1f71;display:flex;align-items:center;justify-content:center;">'
         + '<i class="bi bi-shield-lock" style="color:#fff;font-size:1.2rem;"></i></div>'
         + '<div><div class="fw-bold" style="color:#1a1f71;">Saved Cards</div>'
-        + '<div class="text-muted" style="font-size:.75rem;">Select a card to pay with</div></div></div>'
+        + '</div></div>'
         + '<div id="savedCardList"><div class="text-center my-4">'
         + '<div class="spinner-border spinner-border-sm" style="color:#1a1f71;"></div>'
         + '<p class="text-muted mt-2" style="font-size:.85rem;">Loading saved cards...</p></div></div>'
@@ -344,7 +323,7 @@ function selectCard(index) {
         }
     }
     var proceedBtn = document.getElementById('proceedBtn');
-    if (proceedBtn) proceedBtn.disabled = false;
+    if (proceedBtn) { proceedBtn.disabled = false; proceedBtn.style.opacity = '1'; }
     var deleteBtn = document.getElementById('deleteCardBtn');
     if (deleteBtn) deleteBtn.disabled = false;
 }
@@ -618,9 +597,6 @@ function threeDsFinalPayment(authInfo) {
                 + '<div class="text-muted" style="font-size:.8rem;">' + esc(name) + '</div>'
                 + '</div></div>'
                 + '</div>'
-                + '<div class="d-flex align-items-center gap-2 mt-2 p-2 rounded" style="background:#e8f5e9;">'
-                + '<i class="bi bi-shield-check" style="color:#198754;"></i>'
-                + '<span style="font-size:.8rem;color:#198754;">3D Secure verified</span></div>'
                 + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
                 + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
         } else {
@@ -694,36 +670,15 @@ function showAddCardForm() {
     root.innerHTML = '<div class="wiz-card" style="border-top:3px solid #1a1f71;">'
         + '<div class="d-flex align-items-center gap-2 mb-3">'
         + '<div style="width:40px;height:40px;border-radius:8px;background:#1a1f71;display:flex;align-items:center;justify-content:center;">'
-        + '<i class="bi bi-plus-circle" style="color:#fff;font-size:1.2rem;"></i></div>'
+        + '<i class="bi bi-info-circle" style="color:#fff;font-size:1.2rem;"></i></div>'
         + '<div><div class="fw-bold" style="color:#1a1f71;">Add New Card</div>'
-        + '<div class="text-muted" style="font-size:.75rem;">Securely tokenized — we never store full card numbers</div></div></div>'
-        + '<div class="row g-3 mb-3">'
-        + '<div class="col-12"><label class="wiz-field-label">Card Number <span class="text-danger">*</span></label>'
-        + '<input type="text" id="tokCardNumber" class="form-control wiz-input" placeholder="\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022" maxlength="23" oninput="onCardNumberInput(this)" autocomplete="off"></div>'
+        + '</div></div>'
+        + '<div class="p-3 rounded-3 mb-3" style="background:#f8f9fa;border:1px solid #e9ecef;">'
+        + '<p class="text-muted mb-0" style="font-size:.9rem;">Test cards are pre-loaded automatically in this demo.</p>'
         + '</div>'
-        + '<div class="row g-3 mb-3">'
-        + '<div class="col-4"><label class="wiz-field-label">Exp Month</label>'
-        + '<input type="text" id="tokExpMonth" class="form-control wiz-input" placeholder="12" maxlength="2"></div>'
-        + '<div class="col-4"><label class="wiz-field-label">Exp Year</label>'
-        + '<input type="text" id="tokExpYear" class="form-control wiz-input" placeholder="2028" maxlength="4"></div>'
-        + '<div class="col-4"><label class="wiz-field-label">CVV</label>'
-        + '<input type="password" id="tokCvv" class="form-control wiz-input" placeholder="\u2022\u2022\u2022" maxlength="4"></div>'
-        + '</div>'
-        + '<div class="row g-3 mb-3">'
-        + '<div class="col-6"><label class="wiz-field-label">First Name <span class="text-danger">*</span></label>'
-        + '<input type="text" id="tokFirstName" class="form-control wiz-input" placeholder="John"></div>'
-        + '<div class="col-6"><label class="wiz-field-label">Last Name <span class="text-danger">*</span></label>'
-        + '<input type="text" id="tokLastName" class="form-control wiz-input" placeholder="Doe"></div>'
-        + '</div>'
-        + '<div class="mb-3"><label class="wiz-field-label">Email <span class="text-danger">*</span></label>'
-        + '<input type="email" id="tokEmail" class="form-control wiz-input" placeholder="john@example.com"></div>'
-        + '<button class="w-100 border-0 py-2 rounded-2 fw-bold" id="tokenStoreBtn" onclick="submitAddCard()" style="background:#1a1f71;color:#fff;font-size:.95rem;">'
-        + '<i class="bi bi-shield-check me-2"></i>Save Card</button>'
-        + '<div id="tokenResult" class="mt-3" style="display:none;"></div>'
-        + '<button class="btn w-100 mt-2 fw-semibold" onclick="backToCardList()" style="border:1px solid #1a1f71;color:#1a1f71;">'
+        + '<button class="btn w-100 fw-semibold" onclick="backToCardList()" style="border:1px solid #1a1f71;color:#1a1f71;">'
         + '<i class="bi bi-arrow-left me-2"></i>Back to Cards</button>'
         + '</div>';
-    _rawCardNumber = '';
 }
 
 function backToCardList() {
@@ -735,7 +690,7 @@ function backToCardList() {
         + '<div style="width:40px;height:40px;border-radius:8px;background:#1a1f71;display:flex;align-items:center;justify-content:center;">'
         + '<i class="bi bi-shield-lock" style="color:#fff;font-size:1.2rem;"></i></div>'
         + '<div><div class="fw-bold" style="color:#1a1f71;">Saved Cards</div>'
-        + '<div class="text-muted" style="font-size:.75rem;">Select a card to pay with</div></div></div>'
+        + '</div></div>'
         + '<div id="savedCardList"><div class="text-center my-4">'
         + '<div class="spinner-border spinner-border-sm" style="color:#1a1f71;"></div>'
         + '</div></div>'
@@ -747,36 +702,7 @@ function backToCardList() {
 }
 
 function submitAddCard() {
-    var btn = document.getElementById('tokenStoreBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving card...';
-
-    var req = {
-        cardNumber: _rawCardNumber,
-        expirationMonth: document.getElementById('tokExpMonth').value.trim(),
-        expirationYear: document.getElementById('tokExpYear').value.trim(),
-        securityCode: document.getElementById('tokCvv').value.trim(),
-        firstName: document.getElementById('tokFirstName').value.trim(),
-        lastName: document.getElementById('tokLastName').value.trim(),
-        email: document.getElementById('tokEmail').value.trim()
-    };
-
-    callApi('/api/tokens/customers', 'POST', req).then(function(result) {
-        var el = document.getElementById('tokenResult');
-        el.style.display = 'block';
-        if (result.ok && result.data.transactionId) {
-            setSavedCustomerId(result.data.transactionId);
-            el.innerHTML = '<div class="alert alert-success">'
-                + '<i class="bi bi-check-circle me-2"></i>Card saved securely.</div>';
-            _rawCardNumber = '';
-            setTimeout(function() { backToCardList(); }, 1000);
-        } else {
-            el.innerHTML = '<div class="alert alert-danger"><strong>Error</strong> — '
-                + esc(result.data.message || 'Unknown error') + '</div>';
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-shield-check me-2"></i>Save Card';
-        }
-    });
+    // Removed — card entry now handled by Flex Microform (Tokenized Card) for PCI compliance
 }
 
 function deleteSelectedCard() {
@@ -803,7 +729,7 @@ function renderInvoiceForm() {
         + '<div style="width:40px;height:40px;border-radius:8px;background:#0d6efd;display:flex;align-items:center;justify-content:center;">'
         + '<i class="bi bi-receipt" style="color:#fff;font-size:1.2rem;"></i></div>'
         + '<div><div class="fw-bold" style="color:#0d6efd;">Pay by Invoice</div>'
-        + '<div class="text-muted" style="font-size:.75rem;">Invoice will be created and sent to your email</div></div></div>'
+        + '</div></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Email <span class="text-danger">*</span></label>'
         + '<input type="email" id="invEmail" class="form-control wiz-input" placeholder="you@example.com" style="border-color:#0d6efd33;"></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Name</label>'
@@ -885,6 +811,117 @@ function showInvoiceResult(result, invoiceId) {
     }
 }
 
+// --- Card-Only (UC Widget without Click to Pay) ---
+
+function renderCardOnlyForm() {
+    var total = getTotal();
+    return '<div class="wiz-card" style="border-top:3px solid #0d6efd;">'
+        + '<div class="d-flex align-items-center gap-2 mb-3">'
+        + '<div style="width:40px;height:40px;border-radius:8px;background:#0d6efd;display:flex;align-items:center;justify-content:center;">'
+        + '<i class="bi bi-credit-card" style="color:#fff;font-size:1.2rem;"></i></div>'
+        + '<div><div class="fw-bold" style="color:#0d6efd;">Pay with Card</div>'
+        + '</div></div>'
+        + '<div id="cardOnlyWidgetContainer" style="min-height:200px;">'
+        + '<div class="text-center my-4"><div class="spinner-border spinner-border-sm text-primary"></div>'
+        + '<p class="text-muted mt-2" style="font-size:.85rem;">Loading secure card form...</p></div>'
+        + '</div>'
+        + '<div id="cardOnlyConfirmation" style="display:none;"></div>'
+        + '</div>';
+}
+
+function initCardOnlyWidget() {
+    var total = getTotal();
+    callApi('/api/card-only/capture-context', 'POST', {
+        amount: parseFloat(total.toFixed(2)).toString()
+    }).then(function(result) {
+        if (!result.ok || !result.data.jwt) {
+            document.getElementById('cardOnlyWidgetContainer').innerHTML =
+                '<div class="alert alert-danger">Could not load card form.</div>';
+            return;
+        }
+
+        var cardOnlyJwt = result.data.jwt;
+
+        async function startCardOnlyWidget() {
+            try {
+                var accept = await Accept(cardOnlyJwt);
+                var up = await accept.unifiedPayments(true);
+
+                document.getElementById('cardOnlyWidgetContainer').innerHTML = '';
+
+                var tt = await up.show({
+                    containers: { paymentSelection: '#cardOnlyWidgetContainer' }
+                });
+
+                var completeResponse = await up.complete(tt);
+                var parsed = parseJwt(completeResponse);
+                if (parsed) {
+                    document.getElementById('cardOnlyWidgetContainer').style.display = 'none';
+                    clearCart();
+                    showCardOnlyConfirmation(parsed, total);
+                }
+            } catch (error) {
+                console.error('Card-only payment error:', error);
+                document.getElementById('cardOnlyWidgetContainer').innerHTML =
+                    '<div class="alert alert-danger">Payment failed: ' + esc(error.message || 'Unknown error') + '</div>';
+            }
+        }
+        startCardOnlyWidget();
+    });
+}
+
+function showCardOnlyConfirmation(paymentDetails, total) {
+    var transactionId = (paymentDetails.details &&
+        paymentDetails.details.processorInformation &&
+        paymentDetails.details.processorInformation.transactionId) ||
+        paymentDetails.id || '';
+    var ref = transactionId.slice(-8).toUpperCase();
+
+    var amount = '';
+    if (paymentDetails.details &&
+        paymentDetails.details.orderInformation &&
+        paymentDetails.details.orderInformation.amountDetails) {
+        amount = paymentDetails.details.orderInformation.amountDetails.totalAmount ||
+                 paymentDetails.details.orderInformation.amountDetails.authorizedAmount || '';
+    }
+    var displayAmount = amount ? 'R' + parseFloat(amount).toFixed(2) : fmt(total);
+
+    var cardSuffix = '';
+    var cardType = '';
+    if (paymentDetails.details && paymentDetails.details.paymentInformation) {
+        var pi = paymentDetails.details.paymentInformation;
+        if (pi.tokenizedCard) { cardSuffix = pi.tokenizedCard.suffix || ''; cardType = pi.tokenizedCard.type || ''; }
+        else if (pi.card) { cardSuffix = pi.card.suffix || ''; cardType = pi.card.type || ''; }
+    }
+    var b = { name: 'Card', icon: 'bi-credit-card', color: '#0d6efd' };
+    if (cardType === '001' || (cardType + '').toLowerCase() === 'visa') b = { name: 'Visa', icon: 'bi-credit-card', color: '#1a1f71' };
+    else if (cardType === '002' || (cardType + '').toLowerCase() === 'mastercard') b = { name: 'Mastercard', icon: 'bi-credit-card-2-front', color: '#eb001b' };
+    else if (cardType === '003' || (cardType + '').toLowerCase() === 'amex') b = { name: 'Amex', icon: 'bi-credit-card-2-back', color: '#006fcf' };
+
+    var now = new Date();
+    var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+    var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+
+    document.getElementById('sidebarContent').innerHTML =
+        '<div class="text-center py-3">'
+        + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
+        + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
+        + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
+        + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase!</p>'
+        + '</div>'
+        + '<div class="wiz-card mt-2">'
+        + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + displayAmount + '</span></div>'
+        + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
+        + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
+        + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
+        + (cardSuffix ? '<hr><div class="d-flex align-items-center gap-3">'
+            + '<div style="font-size:1.4rem;color:' + b.color + ';"><i class="bi ' + b.icon + '"></i></div>'
+            + '<div><div class="fw-semibold" style="font-size:.9rem;color:' + b.color + ';">' + esc(b.name) + ' ending in ' + esc(cardSuffix) + '</div></div></div>' : '')
+        + '</div>'
+        + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
+        + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
+}
+
 // --- Tokenized Checkout (Flex Microform) ---
 
 var _flexMicroform = null;
@@ -895,8 +932,8 @@ function renderTokenizedCheckoutForm() {
         + '<div class="d-flex align-items-center gap-2 mb-3">'
         + '<div style="width:40px;height:40px;border-radius:8px;background:#6f42c1;display:flex;align-items:center;justify-content:center;">'
         + '<i class="bi bi-credit-card-2-front" style="color:#fff;font-size:1.2rem;"></i></div>'
-        + '<div><div class="fw-bold" style="color:#6f42c1;">Tokenized Card Payment</div>'
-        + '<div class="text-muted" style="font-size:.75rem;">Card data is tokenized — never touches our server</div></div></div>'
+        + '<div><div class="fw-bold" style="color:#6f42c1;">Tokenized Card</div>'
+        + '</div></div>'
         // Card Number (Flex hosted field)
         + '<div class="mb-3"><label class="wiz-field-label">Card Number <span class="text-danger">*</span></label>'
         + '<div id="flexCardNumber" style="height:38px;border:1px solid #6f42c133;border-radius:6px;padding:6px 12px;background:#fff;"></div>'
@@ -918,25 +955,77 @@ function renderTokenizedCheckoutForm() {
         + '<button class="w-100 border-0 py-2 rounded-2 fw-bold" id="flexPayBtn" onclick="submitTokenizedCheckout()" style="background:#6f42c1;color:#fff;font-size:.95rem;">'
         + '<i class="bi bi-lock me-2"></i>Pay with Tokenized Card</button>'
         + '<div id="flexResult" class="mt-3" style="display:none;"></div>'
-        + '<div class="d-flex align-items-center gap-2 mt-3 p-2 rounded" style="background:#f3f0ff;">'
-        + '<i class="bi bi-shield-check" style="color:#6f42c1;"></i>'
-        + '<span style="font-size:.75rem;color:#6f42c1;">PCI compliant — card data is encrypted by CyberSource Flex Microform before leaving your browser</span></div>'
         + '</div>';
 }
 
 function initFlexMicroform() {
+    var container = document.getElementById('flexCardNumber');
+    if (container) container.innerHTML = '<div class="text-muted" style="font-size:.85rem;">Loading secure card form...</div>';
+
+    // Step 1: Get a Flex Microform-specific capture context from our backend
+    callApi('/api/tokenized-checkout/capture-context', 'POST').then(function(result) {
+        if (!result.ok || !result.data.jwt) {
+            var err = document.getElementById('flexCardError');
+            if (err) err.textContent = 'Could not load secure card form.';
+            return;
+        }
+
+        var flexJwt = result.data.jwt;
+
+        // Step 2: Decode JWT to extract the Flex client library URL
+        try {
+            var payload = JSON.parse(atob(flexJwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+            var ctx = payload.ctx && payload.ctx[0] && payload.ctx[0].data;
+            var libUrl = ctx && ctx.clientLibrary;
+
+            if (!libUrl) {
+                // Fallback URL
+                libUrl = 'https://testflex.cybersource.com/microform/bundle/v2.0/flex-microform.min.js';
+            }
+
+            // Step 3: Dynamically load the Flex Microform library
+            if (window.Flex) {
+                // Already loaded
+                setupFlexFields(flexJwt);
+            } else {
+                var script = document.createElement('script');
+                script.src = libUrl;
+                if (ctx && ctx.clientLibraryIntegrity) {
+                    script.integrity = ctx.clientLibraryIntegrity;
+                    script.crossOrigin = 'anonymous';
+                }
+                script.onload = function() { setupFlexFields(flexJwt); };
+                script.onerror = function() {
+                    var err = document.getElementById('flexCardError');
+                    if (err) err.textContent = 'Failed to load secure card library.';
+                };
+                document.head.appendChild(script);
+            }
+        } catch (e) {
+            console.error('Flex JWT decode error:', e);
+            var err = document.getElementById('flexCardError');
+            if (err) err.textContent = 'Could not initialize secure card form.';
+        }
+    });
+}
+
+function setupFlexFields(flexJwt) {
     try {
-        var captureContextJwt = document.getElementById('jwt').value;
-        var flex = new Flex(captureContextJwt);
+        var flex = new Flex(flexJwt);
         var microform = flex.microform({ styles: {
-            input: { 'font-size': '14px', 'font-family': 'inherit', color: '#333' },
-            ':focus': { color: '#6f42c1' },
-            valid: { color: '#198754' },
+            input: { 'font-size': '1rem', 'font-family': 'system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Noto Sans", "Liberation Sans", Arial, sans-serif', 'font-weight': '400', color: '#212529' },
+            '::placeholder': { color: '#6c757d', 'font-weight': '400' },
+            ':focus': { color: '#212529' },
+            valid: { color: '#212529' },
             invalid: { color: '#dc3545' }
         }});
 
-        var numberField = microform.createField('number', { placeholder: '4111 1111 1111 1111' });
-        var securityCodeField = microform.createField('securityCode', { placeholder: '123' });
+        var numberField = microform.createField('number', { placeholder: 'Enter card number' });
+        var securityCodeField = microform.createField('securityCode', { placeholder: 'CVV' });
+
+        // Clear the loading message before loading fields
+        var container = document.getElementById('flexCardNumber');
+        if (container) container.innerHTML = '';
 
         numberField.load('#flexCardNumber');
         securityCodeField.load('#flexSecurityCode');
@@ -949,6 +1038,7 @@ function initFlexMicroform() {
         });
 
         _flexMicroform = microform;
+        console.log('Flex Microform initialized successfully');
     } catch (e) {
         console.error('Flex Microform init error:', e);
         var err = document.getElementById('flexCardError');
@@ -1015,7 +1105,7 @@ function submitTokenizedCheckout() {
                     + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
                     + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
                     + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
-                    + '<p class="text-muted mb-0" style="font-size:.9rem;">Your card was securely tokenized and payment processed.</p>'
+                    + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase!</p>'
                     + '</div>'
                     + '<div class="wiz-card mt-2">'
                     + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + fmt(total) + '</span></div>'
@@ -1027,9 +1117,6 @@ function submitTokenizedCheckout() {
                     + '<div><div class="fw-semibold" style="font-size:.9rem;color:#6f42c1;">Tokenized Card</div>'
                     + '<div class="text-muted" style="font-size:.8rem;">Flex Microform</div></div></div>'
                     + '</div>'
-                    + '<div class="d-flex align-items-center gap-2 mt-2 p-2 rounded" style="background:#f3f0ff;">'
-                    + '<i class="bi bi-shield-check" style="color:#6f42c1;"></i>'
-                    + '<span style="font-size:.8rem;color:#6f42c1;">PCI DSS compliant — tokenized payment</span></div>'
                     + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
                     + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
             } else {
@@ -1052,11 +1139,11 @@ function renderPaymentLinkForm() {
         + '<div style="width:40px;height:40px;border-radius:8px;background:#E21836;display:flex;align-items:center;justify-content:center;">'
         + '<i class="bi bi-link-45deg" style="color:#fff;font-size:1.2rem;"></i></div>'
         + '<div><div class="fw-bold" style="color:#E21836;">Payment Link</div>'
-        + '<div class="text-muted" style="font-size:.75rem;">Share via QR code, WhatsApp, or copy link</div></div></div>'
+        + '</div></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Description</label>'
         + '<input type="text" id="linkDesc" class="form-control wiz-input" value="CyberShop Payment" placeholder="Payment description" style="border-color:#E2183633;"></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Recipient Phone (for WhatsApp)</label>'
-        + '<input type="tel" id="linkPhone" class="form-control wiz-input" placeholder="+27821234567" style="border-color:#E2183633;"></div>'
+        + '<input type="tel" id="linkPhone" class="form-control wiz-input" placeholder="Phone number" style="border-color:#E2183633;"></div>'
         + '<button class="w-100 border-0 py-2 rounded-2 fw-bold" id="linkBtn" onclick="submitPaymentLink()" style="background:#E21836;color:#fff;font-size:.95rem;">'
         + '<i class="bi bi-link-45deg me-2"></i>Create Payment Link</button>'
         + '<div id="linkResult" class="mt-3" style="display:none;"></div>'
@@ -1148,7 +1235,7 @@ function renderSamsungPayForm() {
         + '<div style="width:40px;height:40px;border-radius:8px;background:#1428A0;display:flex;align-items:center;justify-content:center;">'
         + '<i class="bi bi-phone" style="color:#fff;font-size:1.2rem;"></i></div>'
         + '<div><div class="fw-bold" style="color:#1428A0;">Samsung Pay</div>'
-        + '<div class="text-muted" style="font-size:.75rem;">Pay securely with your Samsung wallet</div></div></div>'
+        + '</div></div>'
         // Simulated wallet card
         + '<div style="background:linear-gradient(135deg,#1428A0 0%,#1e3fbf 100%);border-radius:12px;padding:20px;color:#fff;margin-bottom:16px;position:relative;overflow:hidden;">'
         + '<div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.08);"></div>'
