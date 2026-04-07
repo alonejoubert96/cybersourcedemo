@@ -648,6 +648,7 @@ function showInvoiceResult(result, invoiceId) {
             + '</div>'
             + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
             + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
+        clearCart();
     } else {
         var el = document.getElementById('invoiceResult');
         el.style.display = 'block';
