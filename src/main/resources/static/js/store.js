@@ -926,6 +926,8 @@ function showCardOnlyConfirmation(paymentDetails, total) {
 
 var _flexMicroform = null;
 
+var _flexCardEntered = false;
+
 function renderTokenizedCheckoutForm() {
     var total = getTotal();
     return '<div class="wiz-card" style="border-top:3px solid #6f42c1;">'
@@ -934,16 +936,19 @@ function renderTokenizedCheckoutForm() {
         + '<i class="bi bi-credit-card-2-front" style="color:#fff;font-size:1.2rem;"></i></div>'
         + '<div><div class="fw-bold" style="color:#6f42c1;">Tokenized Card</div>'
         + '</div></div>'
-        // Card Number (Flex hosted field)
+        // Card Number — pre-loaded display + hidden Flex field
         + '<div class="mb-3"><label class="wiz-field-label">Card Number <span class="text-danger">*</span></label>'
-        + '<div id="flexCardNumber" style="height:38px;border:1px solid #6f42c133;border-radius:6px;padding:6px 12px;background:#fff;"></div>'
+        + '<div id="flexCardPreview" onclick="showFlexCardField()" style="height:38px;border:1px solid #6f42c133;border-radius:6px;padding:6px 12px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">'
+        + '<span style="font-size:1rem;color:#212529;letter-spacing:1px;">\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 1111</span>'
+        + '<span style="font-size:.75rem;color:#6f42c1;font-weight:600;">Change</span></div>'
+        + '<div id="flexCardNumber" style="height:38px;border:1px solid #6f42c133;border-radius:6px;padding:6px 12px;background:#fff;display:none;"></div>'
         + '<div id="flexCardError" class="text-danger" style="font-size:.75rem;margin-top:2px;"></div></div>'
         // Expiry row
         + '<div class="row g-3 mb-3">'
         + '<div class="col-4"><label class="wiz-field-label">Exp Month</label>'
-        + '<input type="text" id="flexExpMonth" class="form-control wiz-input" placeholder="MM" maxlength="2" style="border-color:#6f42c133;"></div>'
+        + '<input type="text" id="flexExpMonth" class="form-control wiz-input" value="12" maxlength="2" style="border-color:#6f42c133;"></div>'
         + '<div class="col-4"><label class="wiz-field-label">Exp Year</label>'
-        + '<input type="text" id="flexExpYear" class="form-control wiz-input" placeholder="YYYY" maxlength="4" style="border-color:#6f42c133;"></div>'
+        + '<input type="text" id="flexExpYear" class="form-control wiz-input" value="2028" maxlength="4" style="border-color:#6f42c133;"></div>'
         + '<div class="col-4"><label class="wiz-field-label">CVV <span class="text-danger">*</span></label>'
         + '<div id="flexSecurityCode" style="height:38px;border:1px solid #6f42c133;border-radius:6px;padding:6px 12px;background:#fff;"></div></div>'
         + '</div>'
@@ -958,9 +963,14 @@ function renderTokenizedCheckoutForm() {
         + '</div>';
 }
 
+function showFlexCardField() {
+    document.getElementById('flexCardPreview').style.display = 'none';
+    document.getElementById('flexCardNumber').style.display = '';
+    _flexCardEntered = true;
+}
+
 function initFlexMicroform() {
-    var container = document.getElementById('flexCardNumber');
-    if (container) container.innerHTML = '<div class="text-muted" style="font-size:.85rem;">Loading secure card form...</div>';
+    _flexCardEntered = false;
 
     // Step 1: Get a Flex Microform-specific capture context from our backend
     callApi('/api/tokenized-checkout/capture-context', 'POST').then(function(result) {
@@ -1046,6 +1056,8 @@ function setupFlexFields(flexJwt) {
     }
 }
 
+var _flexTransientToken = null;
+
 function submitTokenizedCheckout() {
     if (getCartCount() === 0) {
         var el = document.getElementById('flexResult');
@@ -1054,28 +1066,47 @@ function submitTokenizedCheckout() {
         return;
     }
 
+    var btn = document.getElementById('flexPayBtn');
+    btn.disabled = true;
+    var total = getTotal();
+    var amount = parseFloat(total.toFixed(2)).toString();
+
+    // Default card path — use card number for 3DS setup, then pay via /pay-default
+    if (!_flexCardEntered) {
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Initiating bank verification...';
+        // Use saved card 3DS endpoints with the default card registered at seed time
+        callApi('/api/3ds/setup', 'POST', { cardSuffix: '1111' }).then(function(result) {
+            if (!result.ok || !result.data.accessToken) {
+                // 3DS not available — pay directly
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing payment...';
+                callApi('/api/tokenized-checkout/pay-default', 'POST', { amount: amount, currency: 'ZAR' }).then(function(r) {
+                    handleTokenizedCheckoutResult(r, total, btn);
+                });
+                return;
+            }
+            // Run 3DS flow then pay with default card
+            runTokenized3ds(result.data, amount, 'default', null, btn, total);
+        });
+        return;
+    }
+
+    // Flex Microform path — tokenize first, then 3DS with transient token
     if (!_flexMicroform) {
         var el = document.getElementById('flexResult');
         el.style.display = 'block';
         el.innerHTML = '<div class="alert alert-danger">Secure card form not initialized. Please reopen this form.</div>';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-lock me-2"></i>Pay with Tokenized Card';
         return;
     }
 
-    var btn = document.getElementById('flexPayBtn');
-    btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Tokenizing card...';
 
     var expMonth = document.getElementById('flexExpMonth').value.trim();
     var expYear = document.getElementById('flexExpYear').value.trim();
 
-    var options = {
-        expirationMonth: expMonth,
-        expirationYear: expYear
-    };
-
-    _flexMicroform.createToken(options, function(err, token) {
+    _flexMicroform.createToken({ expirationMonth: expMonth, expirationYear: expYear }, function(err, token) {
         if (err) {
-            console.error('Flex token error:', err);
             var el = document.getElementById('flexResult');
             el.style.display = 'block';
             el.innerHTML = '<div class="alert alert-danger"><strong>Tokenization Failed</strong><br>'
@@ -1085,50 +1116,191 @@ function submitTokenizedCheckout() {
             return;
         }
 
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing payment...';
+        _flexTransientToken = token;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Initiating bank verification...';
 
-        var total = getTotal();
-        callApi('/api/tokenized-checkout/pay', 'POST', {
-            transientToken: token,
-            amount: parseFloat(total.toFixed(2)),
-            currency: 'ZAR'
-        }).then(function(result) {
-            if (result.ok) {
-                clearCart();
-                var now = new Date();
-                var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
-                var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
-                var ref = (result.data.transactionId || '').slice(-8).toUpperCase();
-
-                document.getElementById('sidebarContent').innerHTML =
-                    '<div class="text-center py-3">'
-                    + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
-                    + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
-                    + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
-                    + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase!</p>'
-                    + '</div>'
-                    + '<div class="wiz-card mt-2">'
-                    + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + fmt(total) + '</span></div>'
-                    + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
-                    + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
-                    + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
-                    + '<hr><div class="d-flex align-items-center gap-3">'
-                    + '<div style="font-size:1.4rem;color:#6f42c1;"><i class="bi bi-credit-card-2-front"></i></div>'
-                    + '<div><div class="fw-semibold" style="font-size:.9rem;color:#6f42c1;">Tokenized Card</div>'
-                    + '<div class="text-muted" style="font-size:.8rem;">Flex Microform</div></div></div>'
-                    + '</div>'
-                    + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
-                    + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
-            } else {
-                var el = document.getElementById('flexResult');
-                el.style.display = 'block';
-                el.innerHTML = '<div class="alert alert-danger"><strong>Payment Failed</strong><br>'
-                    + esc(result.data.message || 'Could not process payment. Please try again.') + '</div>';
-                btn.disabled = false;
-                btn.innerHTML = '<i class="bi bi-lock me-2"></i>Pay with Tokenized Card';
+        // 3DS setup with transient token
+        callApi('/api/3ds/token/setup', 'POST', { transientToken: token }).then(function(result) {
+            if (!result.ok || !result.data.accessToken) {
+                // 3DS not available — pay directly with token
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing payment...';
+                callApi('/api/tokenized-checkout/pay', 'POST', { transientToken: token, amount: amount, currency: 'ZAR' }).then(function(r) {
+                    handleTokenizedCheckoutResult(r, total, btn);
+                });
+                return;
             }
+            runTokenized3ds(result.data, amount, 'flex', token, btn, total);
         });
     });
+}
+
+function runTokenized3ds(setupData, amount, mode, transientToken, btn, total) {
+    // Device data collection
+    var form = document.getElementById('cardinal_collection_form');
+    form.action = setupData.deviceDataCollectionUrl;
+    document.getElementById('cardinal_collection_form_input').value = setupData.accessToken;
+    form.submit();
+
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verifying card with your bank...';
+
+    var ddcDone = false;
+    function onDdc(event) {
+        if (event.data && event.data.MessageType === 'profile.completed') {
+            ddcDone = true;
+            window.removeEventListener('message', onDdc);
+            tokenized3dsEnroll(setupData.referenceId, amount, mode, transientToken, btn, total);
+        }
+    }
+    window.addEventListener('message', onDdc);
+    setTimeout(function() {
+        if (!ddcDone) {
+            window.removeEventListener('message', onDdc);
+            tokenized3dsEnroll(setupData.referenceId, amount, mode, transientToken, btn, total);
+        }
+    }, 10000);
+}
+
+function tokenized3dsEnroll(referenceId, amount, mode, transientToken, btn, total) {
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Checking authentication...';
+
+    var browserInfo = {
+        httpAcceptContent: 'text/html',
+        httpBrowserLanguage: navigator.language || 'en-ZA',
+        httpBrowserColorDepth: String(screen.colorDepth || 24),
+        httpBrowserScreenHeight: String(screen.height || 1080),
+        httpBrowserScreenWidth: String(screen.width || 1920),
+        httpBrowserTimeDifference: String(new Date().getTimezoneOffset()),
+        userAgentBrowserValue: navigator.userAgent
+    };
+
+    var enrollUrl = mode === 'default' ? '/api/3ds/enroll' : '/api/3ds/token/enroll';
+    var enrollBody = mode === 'default'
+        ? { cardSuffix: '1111', amount: amount, currency: 'ZAR', referenceId: referenceId, browserInfo: browserInfo }
+        : { transientToken: transientToken, amount: amount, currency: 'ZAR', referenceId: referenceId, browserInfo: browserInfo };
+
+    callApi(enrollUrl, 'POST', enrollBody).then(function(result) {
+        if (!result.ok) {
+            tokenized3dsFallbackPay(mode, transientToken, amount, btn, total);
+            return;
+        }
+
+        var status = result.data.status;
+        var authInfo = result.data.authenticationInformation || {};
+
+        if (status === 'AUTHENTICATION_SUCCESSFUL') {
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Authenticated — processing payment...';
+            tokenized3dsFinalPay(mode, transientToken, amount, authInfo, btn, total);
+        } else if (status === 'PENDING_AUTHENTICATION' && authInfo.stepUpUrl && authInfo.accessToken) {
+            btn.innerHTML = '<i class="bi bi-shield-lock me-1"></i> Complete verification in the popup...';
+            // Store state for after challenge
+            window._tokenized3dsState = { mode: mode, transientToken: transientToken, amount: amount, btn: btn, total: total, authTransactionId: authInfo.authenticationTransactionId };
+            showTokenizedChallengeIframe(authInfo.stepUpUrl, authInfo.accessToken);
+        } else {
+            var el = document.getElementById('flexResult');
+            if (el) { el.style.display = 'block'; el.innerHTML = '<div class="alert alert-danger"><strong>Authentication Failed</strong><br>Your bank could not verify your identity.</div>'; }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-lock me-2"></i>Pay with Tokenized Card';
+        }
+    });
+}
+
+function showTokenizedChallengeIframe(stepUpUrl, accessToken) {
+    document.getElementById('step-up-form').action = stepUpUrl;
+    document.getElementById('step-up-jwt').value = accessToken;
+    document.getElementById('step-up-md').value = 'tokenized';
+
+    function onChallenge(event) {
+        if (event.data && event.data.type === '3ds-challenge-complete') {
+            window.removeEventListener('message', onChallenge);
+            var modal = bootstrap.Modal.getInstance(document.getElementById('threeDsModal'));
+            if (modal) modal.hide();
+
+            var s = window._tokenized3dsState;
+            s.btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Validating authentication...';
+
+            // For default card, use card-suffix validate; for flex, use token validate
+            var validateUrl = s.mode === 'default' ? '/api/3ds/validate' : '/api/3ds/token/validate';
+            var validateBody = s.mode === 'default'
+                ? { authenticationTransactionId: event.data.transactionId || s.authTransactionId, cardSuffix: '1111', amount: s.amount, currency: 'ZAR' }
+                : { authenticationTransactionId: event.data.transactionId || s.authTransactionId, cardNumber: '4111111111111111', cardType: '001', expirationMonth: '12', expirationYear: '2028', amount: s.amount, currency: 'ZAR' };
+
+            callApi(validateUrl, 'POST', validateBody).then(function(result) {
+                if (result.ok && result.data.status === 'AUTHENTICATION_SUCCESSFUL') {
+                    tokenized3dsFinalPay(s.mode, s.transientToken, s.amount, result.data.authenticationInformation || {}, s.btn, s.total);
+                } else {
+                    var el = document.getElementById('flexResult');
+                    if (el) { el.style.display = 'block'; el.innerHTML = '<div class="alert alert-danger"><strong>Verification Failed</strong></div>'; }
+                    s.btn.disabled = false;
+                    s.btn.innerHTML = '<i class="bi bi-lock me-2"></i>Pay with Tokenized Card';
+                }
+            });
+        }
+    }
+    window.addEventListener('message', onChallenge);
+
+    var modal = new bootstrap.Modal(document.getElementById('threeDsModal'));
+    modal.show();
+    document.getElementById('step-up-form').submit();
+}
+
+function tokenized3dsFinalPay(mode, transientToken, amount, authInfo, btn, total) {
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing payment...';
+
+    var payUrl = mode === 'default' ? '/api/tokenized-checkout/pay-default' : '/api/tokenized-checkout/pay';
+    var payBody = mode === 'default'
+        ? { amount: parseFloat(amount), currency: 'ZAR', threeDsData: authInfo }
+        : { transientToken: transientToken, amount: parseFloat(amount), currency: 'ZAR', threeDsData: authInfo };
+
+    callApi(payUrl, 'POST', payBody).then(function(result) {
+        handleTokenizedCheckoutResult(result, total, btn);
+    });
+}
+
+function tokenized3dsFallbackPay(mode, transientToken, amount, btn, total) {
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing payment...';
+    var payUrl = mode === 'default' ? '/api/tokenized-checkout/pay-default' : '/api/tokenized-checkout/pay';
+    var payBody = mode === 'default'
+        ? { amount: parseFloat(amount), currency: 'ZAR' }
+        : { transientToken: transientToken, amount: parseFloat(amount), currency: 'ZAR' };
+    callApi(payUrl, 'POST', payBody).then(function(result) {
+        handleTokenizedCheckoutResult(result, total, btn);
+    });
+}
+
+function handleTokenizedCheckoutResult(result, total, btn) {
+    if (result.ok) {
+        clearCart();
+        var now = new Date();
+        var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+        var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+        var ref = (result.data.transactionId || '').slice(-8).toUpperCase();
+
+        document.getElementById('sidebarContent').innerHTML =
+            '<div class="text-center py-3">'
+            + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
+            + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
+            + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
+            + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase!</p>'
+            + '</div>'
+            + '<div class="wiz-card mt-2">'
+            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + fmt(total) + '</span></div>'
+            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
+            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
+            + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
+            + '<hr><div class="d-flex align-items-center gap-3">'
+            + '<div style="font-size:1.4rem;color:#6f42c1;"><i class="bi bi-credit-card-2-front"></i></div>'
+            + '<div><div class="fw-semibold" style="font-size:.9rem;color:#6f42c1;">Tokenized Card</div></div></div>'
+            + '</div>'
+            + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
+            + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
+    } else {
+        var el = document.getElementById('flexResult');
+        el.style.display = 'block';
+        el.innerHTML = '<div class="alert alert-danger"><strong>Payment Failed</strong><br>'
+            + esc(result.data.message || 'Could not process payment. Please try again.') + '</div>';
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-lock me-2"></i>Pay with Tokenized Card';
+    }
 }
 
 // --- Payment Link ---

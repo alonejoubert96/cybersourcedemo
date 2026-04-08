@@ -77,4 +77,81 @@ public class TokenizedCheckoutService {
             throw new PaymentException("Tokenized checkout processing failed", e);
         }
     }
+
+    public PaymentResponse payWithDefaultCard(double amount, String currency, Map<String, String> threeDsData) {
+        try {
+            ApiClient apiClient = apiClientFactory.create();
+
+            CreatePaymentRequest paymentRequest = new CreatePaymentRequest();
+
+            Ptsv2paymentsClientReferenceInformation clientRef = new Ptsv2paymentsClientReferenceInformation();
+            clientRef.code("default-" + UUID.randomUUID().toString().substring(0, 8));
+            paymentRequest.clientReferenceInformation(clientRef);
+
+            Ptsv2paymentsProcessingInformation processingInfo = new Ptsv2paymentsProcessingInformation();
+            processingInfo.capture(true);
+            paymentRequest.processingInformation(processingInfo);
+
+            Ptsv2paymentsPaymentInformation paymentInfo = new Ptsv2paymentsPaymentInformation();
+            Ptsv2paymentsPaymentInformationCard card = new Ptsv2paymentsPaymentInformationCard();
+            card.number("4111111111111111");
+            card.expirationMonth("12");
+            card.expirationYear("2028");
+            card.securityCode("123");
+            card.type("001");
+            paymentInfo.card(card);
+            paymentRequest.paymentInformation(paymentInfo);
+
+            if (threeDsData != null) {
+                Ptsv2paymentsConsumerAuthenticationInformation consumerAuth = new Ptsv2paymentsConsumerAuthenticationInformation();
+                if (threeDsData.get("cavv") != null) consumerAuth.cavv(threeDsData.get("cavv"));
+                if (threeDsData.get("eciRaw") != null) consumerAuth.eciRaw(threeDsData.get("eciRaw"));
+                if (threeDsData.get("paresStatus") != null) consumerAuth.paresStatus(threeDsData.get("paresStatus"));
+                if (threeDsData.get("veresEnrolled") != null) consumerAuth.veresEnrolled(threeDsData.get("veresEnrolled"));
+                if (threeDsData.get("xid") != null) consumerAuth.xid(threeDsData.get("xid"));
+                if (threeDsData.get("specificationVersion") != null) consumerAuth.paSpecificationVersion(threeDsData.get("specificationVersion"));
+                if (threeDsData.get("directoryServerTransactionId") != null) consumerAuth.directoryServerTransactionId(threeDsData.get("directoryServerTransactionId"));
+                if (threeDsData.get("authenticationTransactionId") != null) consumerAuth.authenticationTransactionId(threeDsData.get("authenticationTransactionId"));
+                if (threeDsData.get("indicator") != null) processingInfo.commerceIndicator(threeDsData.get("indicator"));
+                paymentRequest.consumerAuthenticationInformation(consumerAuth);
+            }
+
+            Ptsv2paymentsOrderInformation orderInfo = new Ptsv2paymentsOrderInformation();
+            Ptsv2paymentsOrderInformationAmountDetails amountDetails = new Ptsv2paymentsOrderInformationAmountDetails();
+            amountDetails.totalAmount(String.valueOf(amount));
+            amountDetails.currency(currency);
+            orderInfo.amountDetails(amountDetails);
+
+            Ptsv2paymentsOrderInformationBillTo billTo = new Ptsv2paymentsOrderInformationBillTo();
+            billTo.firstName("Demo");
+            billTo.lastName("Customer");
+            billTo.address1("123 Main Street");
+            billTo.locality("Cape Town");
+            billTo.administrativeArea("Western Cape");
+            billTo.postalCode("8001");
+            billTo.country("ZA");
+            billTo.email("demo@cybershop.test");
+            billTo.phoneNumber("27821234567");
+            orderInfo.billTo(billTo);
+            paymentRequest.orderInformation(orderInfo);
+
+            PaymentsApi api = new PaymentsApi(apiClient);
+            PtsV2PaymentsPost201Response result = api.createPayment(paymentRequest);
+
+            log.info("Default card payment — status: {}, id: {}", result.getStatus(), result.getId());
+
+            return PaymentResponse.builder()
+                    .status(result.getStatus())
+                    .transactionId(result.getId())
+                    .message("Payment successful")
+                    .httpStatus(Integer.parseInt(apiClient.responseCode))
+                    .build();
+
+        } catch (Invokers.ApiException e) {
+            log.error("Default card payment error: {}", e.getResponseBody(), e);
+            throw new PaymentException("Payment failed: " + e.getMessage(), e.getCode(), e.getResponseBody());
+        } catch (Exception e) {
+            throw new PaymentException("Payment processing failed", e);
+        }
+    }
 }

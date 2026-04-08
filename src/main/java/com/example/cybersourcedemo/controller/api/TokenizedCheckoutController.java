@@ -32,4 +32,13 @@ public class TokenizedCheckoutController {
         String currency = (String) body.getOrDefault("currency", "ZAR");
         return ResponseEntity.ok(tokenizedCheckoutService.payWithTransientToken(transientToken, amount, currency));
     }
+
+    @SuppressWarnings("unchecked")
+    @PostMapping("/pay-default")
+    public ResponseEntity<PaymentResponse> payDefault(@RequestBody Map<String, Object> body) {
+        double amount = ((Number) body.getOrDefault("amount", 0.0)).doubleValue();
+        String currency = (String) body.getOrDefault("currency", "ZAR");
+        Map<String, String> threeDsData = (Map<String, String>) body.get("threeDsData");
+        return ResponseEntity.ok(tokenizedCheckoutService.payWithDefaultCard(amount, currency, threeDsData));
+    }
 }
