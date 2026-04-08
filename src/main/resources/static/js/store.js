@@ -811,115 +811,190 @@ function showInvoiceResult(result, invoiceId) {
     }
 }
 
-// --- Card-Only (UC Widget without Click to Pay) ---
+// --- Click to Pay (Simulated) ---
+
+var _ctpCards = [];
+var _ctpSelectedIndex = -1;
 
 function renderCardOnlyForm() {
-    var total = getTotal();
-    return '<div class="wiz-card" style="border-top:3px solid #0d6efd;">'
+    return '<div class="wiz-card" style="border-top:3px solid #1a1f71;">'
         + '<div class="d-flex align-items-center gap-2 mb-3">'
-        + '<div style="width:40px;height:40px;border-radius:8px;background:#0d6efd;display:flex;align-items:center;justify-content:center;">'
+        + '<div style="width:40px;height:40px;border-radius:8px;background:#1a1f71;display:flex;align-items:center;justify-content:center;">'
         + '<i class="bi bi-credit-card" style="color:#fff;font-size:1.2rem;"></i></div>'
-        + '<div><div class="fw-bold" style="color:#0d6efd;">Pay with Card</div>'
+        + '<div><div class="fw-bold" style="color:#1a1f71;">Click to Pay</div>'
         + '</div></div>'
-        + '<div id="cardOnlyWidgetContainer" style="min-height:200px;">'
-        + '<div class="text-center my-4"><div class="spinner-border spinner-border-sm text-primary"></div>'
-        + '<p class="text-muted mt-2" style="font-size:.85rem;">Loading secure card form...</p></div>'
-        + '</div>'
-        + '<div id="cardOnlyConfirmation" style="display:none;"></div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Email Address</label>'
+        + '<input type="email" id="ctpEmail" class="form-control wiz-input" value="demo@cybershop.test" style="border-color:#1a1f7133;"></div>'
+        + '<button class="w-100 border-0 py-2 rounded-2 fw-bold" id="ctpLookupBtn" onclick="ctpLookup()" style="background:#1a1f71;color:#fff;font-size:.95rem;">'
+        + '<i class="bi bi-search me-2"></i>Find My Cards</button>'
+        + '<div id="ctpContent" class="mt-3"></div>'
         + '</div>';
 }
 
 function initCardOnlyWidget() {
-    var total = getTotal();
-    callApi('/api/card-only/capture-context', 'POST', {
-        amount: parseFloat(total.toFixed(2)).toString()
-    }).then(function(result) {
-        if (!result.ok || !result.data.jwt) {
-            document.getElementById('cardOnlyWidgetContainer').innerHTML =
-                '<div class="alert alert-danger">Could not load card form.</div>';
+    // Nothing to init — user clicks "Find My Cards"
+}
+
+function ctpLookup() {
+    var btn = document.getElementById('ctpLookupBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Looking up cards...';
+
+    var customerId = getSavedCustomerId();
+    if (!customerId) {
+        // Seed cards first
+        callApi('/api/tokens/seed', 'POST').then(function(result) {
+            if (result.ok && result.data.customerId) {
+                setSavedCustomerId(result.data.customerId);
+                ctpFetchCards(result.data.customerId, btn);
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-search me-2"></i>Find My Cards';
+                document.getElementById('ctpContent').innerHTML = '<div class="alert alert-warning">No cards found for this email.</div>';
+            }
+        });
+    } else {
+        // Simulate lookup delay
+        setTimeout(function() { ctpFetchCards(customerId, btn); }, 800);
+    }
+}
+
+function ctpFetchCards(customerId, btn) {
+    callApi('/api/tokens/customers/' + customerId + '/cards', 'GET').then(function(result) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-search me-2"></i>Find My Cards';
+
+        if (!result.ok || !result.data || result.data.length === 0) {
+            document.getElementById('ctpContent').innerHTML = '<div class="alert alert-info">No cards found. Add a card to get started.</div>';
             return;
         }
 
-        var cardOnlyJwt = result.data.jwt;
-
-        async function startCardOnlyWidget() {
-            try {
-                var accept = await Accept(cardOnlyJwt);
-                var up = await accept.unifiedPayments(true);
-
-                document.getElementById('cardOnlyWidgetContainer').innerHTML = '';
-
-                var tt = await up.show({
-                    containers: { paymentSelection: '#cardOnlyWidgetContainer' }
-                });
-
-                var completeResponse = await up.complete(tt);
-                var parsed = parseJwt(completeResponse);
-                if (parsed) {
-                    document.getElementById('cardOnlyWidgetContainer').style.display = 'none';
-                    clearCart();
-                    showCardOnlyConfirmation(parsed, total);
-                }
-            } catch (error) {
-                console.error('Card-only payment error:', error);
-                document.getElementById('cardOnlyWidgetContainer').innerHTML =
-                    '<div class="alert alert-danger">Payment failed: ' + esc(error.message || 'Unknown error') + '</div>';
-            }
-        }
-        startCardOnlyWidget();
+        _ctpCards = result.data;
+        _ctpSelectedIndex = -1;
+        ctpRenderCardList();
     });
 }
 
-function showCardOnlyConfirmation(paymentDetails, total) {
-    var transactionId = (paymentDetails.details &&
-        paymentDetails.details.processorInformation &&
-        paymentDetails.details.processorInformation.transactionId) ||
-        paymentDetails.id || '';
-    var ref = transactionId.slice(-8).toUpperCase();
+function ctpRenderCardList() {
+    var email = document.getElementById('ctpEmail').value.trim();
+    var total = getTotal();
+    var html = '<div class="mb-2" style="font-size:.85rem;color:#1a1f71;"><i class="bi bi-check-circle me-1"></i>'
+        + esc(_ctpCards.length) + ' card' + (_ctpCards.length !== 1 ? 's' : '') + ' found for <strong>' + esc(email) + '</strong></div>';
 
-    var amount = '';
-    if (paymentDetails.details &&
-        paymentDetails.details.orderInformation &&
-        paymentDetails.details.orderInformation.amountDetails) {
-        amount = paymentDetails.details.orderInformation.amountDetails.totalAmount ||
-                 paymentDetails.details.orderInformation.amountDetails.authorizedAmount || '';
+    for (var i = 0; i < _ctpCards.length; i++) {
+        var c = _ctpCards[i];
+        var b = cardBrand(c.cardType);
+        var suffix = c.cardSuffix || '****';
+        var expiry = (c.expirationMonth || '??') + '/' + (c.expirationYear || '????');
+        var name = ((c.firstName || '') + ' ' + (c.lastName || '')).trim() || 'Cardholder';
+        var selected = _ctpSelectedIndex === i;
+
+        html += '<div onclick="ctpSelectCard(' + i + ')" style="cursor:pointer;border:2px solid ' + (selected ? b.color : '#e9ecef') + ';border-radius:8px;padding:12px;margin-bottom:8px;background:' + (selected ? b.bg : '#fff') + ';transition:all .2s;">'
+            + '<div class="d-flex align-items-center gap-3">'
+            + '<div style="font-size:1.5rem;color:' + b.color + ';"><i class="bi ' + b.icon + '"></i></div>'
+            + '<div class="flex-grow-1">'
+            + '<div class="fw-semibold" style="color:' + b.color + ';">' + esc(b.name) + '</div>'
+            + '<div style="font-family:monospace;font-size:.9rem;letter-spacing:1px;">\u2022\u2022\u2022\u2022 ' + esc(suffix) + '</div>'
+            + '<div class="text-muted" style="font-size:.75rem;">' + esc(name) + ' \u2022 ' + esc(expiry) + '</div>'
+            + '</div>'
+            + (selected ? '<i class="bi bi-check-circle-fill" style="color:' + b.color + ';font-size:1.2rem;"></i>' : '<i class="bi bi-circle" style="color:#ccc;font-size:1.2rem;"></i>')
+            + '</div></div>';
     }
-    var displayAmount = amount ? 'R' + parseFloat(amount).toFixed(2) : fmt(total);
 
-    var cardSuffix = '';
-    var cardType = '';
-    if (paymentDetails.details && paymentDetails.details.paymentInformation) {
-        var pi = paymentDetails.details.paymentInformation;
-        if (pi.tokenizedCard) { cardSuffix = pi.tokenizedCard.suffix || ''; cardType = pi.tokenizedCard.type || ''; }
-        else if (pi.card) { cardSuffix = pi.card.suffix || ''; cardType = pi.card.type || ''; }
+    // Amount
+    html += '<div class="text-center my-3">'
+        + '<div class="text-muted" style="font-size:.8rem;">Amount to pay</div>'
+        + '<div class="fw-bold fs-4">' + fmt(total) + '</div></div>';
+
+    // Pay button
+    html += '<button class="w-100 border-0 py-2 rounded-2 fw-bold" id="ctpPayBtn" onclick="ctpPay()" '
+        + (_ctpSelectedIndex < 0 ? 'disabled style="background:#1a1f71;color:#fff;font-size:.95rem;opacity:.6;"' : 'style="background:#1a1f71;color:#fff;font-size:.95rem;opacity:1;"')
+        + '><i class="bi bi-lock me-2"></i>Pay Now</button>';
+
+    // Remove card link
+    if (_ctpSelectedIndex >= 0) {
+        html += '<button class="btn btn-link text-danger w-100 mt-2" style="font-size:.85rem;" onclick="ctpRemoveCard()">'
+            + '<i class="bi bi-trash me-1"></i>Remove Selected Card</button>';
     }
-    var b = { name: 'Card', icon: 'bi-credit-card', color: '#0d6efd' };
-    if (cardType === '001' || (cardType + '').toLowerCase() === 'visa') b = { name: 'Visa', icon: 'bi-credit-card', color: '#1a1f71' };
-    else if (cardType === '002' || (cardType + '').toLowerCase() === 'mastercard') b = { name: 'Mastercard', icon: 'bi-credit-card-2-front', color: '#eb001b' };
-    else if (cardType === '003' || (cardType + '').toLowerCase() === 'amex') b = { name: 'Amex', icon: 'bi-credit-card-2-back', color: '#006fcf' };
 
-    var now = new Date();
-    var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
-    var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+    document.getElementById('ctpContent').innerHTML = html;
+}
 
-    document.getElementById('sidebarContent').innerHTML =
-        '<div class="text-center py-3">'
-        + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
-        + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
-        + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
-        + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase!</p>'
-        + '</div>'
-        + '<div class="wiz-card mt-2">'
-        + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + displayAmount + '</span></div>'
-        + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
-        + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
-        + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
-        + (cardSuffix ? '<hr><div class="d-flex align-items-center gap-3">'
-            + '<div style="font-size:1.4rem;color:' + b.color + ';"><i class="bi ' + b.icon + '"></i></div>'
-            + '<div><div class="fw-semibold" style="font-size:.9rem;color:' + b.color + ';">' + esc(b.name) + ' ending in ' + esc(cardSuffix) + '</div></div></div>' : '')
-        + '</div>'
-        + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
-        + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
+function ctpSelectCard(index) {
+    _ctpSelectedIndex = index;
+    ctpRenderCardList();
+}
+
+function ctpRemoveCard() {
+    if (_ctpSelectedIndex < 0 || _ctpSelectedIndex >= _ctpCards.length) return;
+    var card = _ctpCards[_ctpSelectedIndex];
+    var customerId = getSavedCustomerId();
+    if (!customerId || !card.paymentInstrumentId) return;
+
+    callApi('/api/tokens/customers/' + customerId + '/cards/' + card.paymentInstrumentId, 'DELETE').then(function() {
+        _ctpCards.splice(_ctpSelectedIndex, 1);
+        _ctpSelectedIndex = -1;
+        if (_ctpCards.length === 0) {
+            document.getElementById('ctpContent').innerHTML = '<div class="alert alert-info">All cards removed. Use Tokenized Card to add a new one.</div>';
+        } else {
+            ctpRenderCardList();
+        }
+    });
+}
+
+function ctpPay() {
+    if (_ctpSelectedIndex < 0 || getCartCount() === 0) return;
+
+    var customerId = getSavedCustomerId();
+    var card = _ctpCards[_ctpSelectedIndex];
+    var b = cardBrand(card.cardType);
+    var suffix = card.cardSuffix || '****';
+    var name = ((card.firstName || '') + ' ' + (card.lastName || '')).trim() || 'Cardholder';
+    var total = getTotal();
+
+    var btn = document.getElementById('ctpPayBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing payment...';
+
+    callApi('/api/tokens/pay', 'POST', {
+        customerId: customerId,
+        amount: parseFloat(total.toFixed(2)),
+        currency: 'ZAR'
+    }).then(function(result) {
+        if (result.ok) {
+            clearCart();
+            var now = new Date();
+            var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+            var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+            var ref = (result.data.transactionId || '').slice(-8).toUpperCase();
+
+            document.getElementById('sidebarContent').innerHTML =
+                '<div class="text-center py-3">'
+                + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
+                + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
+                + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
+                + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase!</p>'
+                + '</div>'
+                + '<div class="wiz-card mt-2">'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + fmt(total) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
+                + '<hr><div class="d-flex align-items-center gap-3">'
+                + '<div style="font-size:1.4rem;color:' + b.color + ';"><i class="bi ' + b.icon + '"></i></div>'
+                + '<div><div class="fw-semibold" style="font-size:.9rem;color:' + b.color + ';">' + esc(b.name) + ' ending in ' + esc(suffix) + '</div>'
+                + '<div class="text-muted" style="font-size:.8rem;">' + esc(name) + '</div></div></div>'
+                + '</div>'
+                + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
+                + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
+        } else {
+            var el = document.getElementById('ctpContent');
+            el.innerHTML = '<div class="alert alert-danger"><strong>Payment Failed</strong><br>'
+                + esc(result.data.message || 'Could not process payment.') + '</div>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-lock me-2"></i>Pay Now';
+        }
+    });
 }
 
 // --- Tokenized Checkout (Flex Microform) ---
