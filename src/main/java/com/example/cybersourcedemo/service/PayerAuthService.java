@@ -5,10 +5,13 @@ import Invokers.ApiClient;
 import Model.*;
 import com.example.cybersourcedemo.exception.PaymentException;
 import com.example.cybersourcedemo.sdk.ApiClientFactory;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -26,7 +29,12 @@ public class PayerAuthService {
     @jakarta.annotation.PostConstruct
     public void init() {
         // Register the default tokenized checkout test card
-        registerCard("1111", "4111111111111111", "001", "12", "2028");
+        registerCard("1091", "4000000000001091", "001", "12", "2028");
+        // Register saved card test cards (same as seedTestCards)
+        registerCard("1005", "4000000000001005", "001", "12", "2028");
+        registerCard("1005", "5200000000001005", "002", "06", "2027");
+        registerCard("1091", "4000000000001091", "001", "03", "2029");
+        registerCard("1096", "5200000000001096", "002", "09", "2028");
     }
 
     public void registerCard(String suffix, String number, String type, String expMonth, String expYear) {
@@ -57,7 +65,7 @@ public class PayerAuthService {
             request.clientReferenceInformation(clientRef);
 
             Riskv1authenticationsetupsTokenInformation tokenInfo = new Riskv1authenticationsetupsTokenInformation();
-            tokenInfo.transientToken(transientToken);
+            tokenInfo.jti(extractJti(transientToken));
             request.tokenInformation(tokenInfo);
 
             return executeSetup(apiClient, request);
@@ -130,7 +138,7 @@ public class PayerAuthService {
             CheckPayerAuthEnrollmentRequest request = buildEnrollmentRequest(amount, currency, referenceId, returnUrl, browserInfo);
 
             Riskv1authenticationsetupsTokenInformation tokenInfo = new Riskv1authenticationsetupsTokenInformation();
-            tokenInfo.transientToken(transientToken);
+            tokenInfo.jti(extractJti(transientToken));
             request.tokenInformation(tokenInfo);
 
             return executeEnrollment(apiClient, request);
@@ -327,6 +335,20 @@ public class PayerAuthService {
             throw new PaymentException("3DS validation failed: " + e.getMessage(), e.getCode(), e.getResponseBody());
         } catch (Exception e) {
             throw new PaymentException("3DS validation processing failed", e);
+        }
+    }
+
+    private String extractJti(String transientToken) {
+        try {
+            String[] parts = transientToken.split("\\.");
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+            JsonNode node = new ObjectMapper().readTree(payload);
+            String jti = node.get("jti").asText();
+            log.info("Extracted jti from transient token: {}", jti);
+            return jti;
+        } catch (Exception e) {
+            log.warn("Could not extract jti from transient token, using token as-is", e);
+            return transientToken;
         }
     }
 }

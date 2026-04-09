@@ -163,9 +163,9 @@ public class TokenService {
             String customerId = customerResponse.getId();
 
             String[][] testCards = {
-                    {"4456530000001005", "12", "2028", "001", "John", "Doe"},       // Visa — 3DS frictionless
+                    {"4000000000001005", "12", "2028", "001", "John", "Doe"},       // Visa — 3DS frictionless
                     {"5200000000001005", "06", "2027", "002", "Jane", "Smith"},      // Mastercard — 3DS frictionless
-                    {"4456530000001091", "03", "2029", "001", "Alex", "Johnson"},    // Visa — 3DS challenge
+                    {"4000000000001091", "03", "2029", "001", "Alex", "Johnson"},    // Visa — 3DS challenge
                     {"5200000000001096", "09", "2028", "002", "Sam", "Williams"},    // Mastercard — 3DS challenge
             };
 

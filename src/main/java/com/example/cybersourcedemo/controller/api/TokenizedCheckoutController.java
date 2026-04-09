@@ -25,20 +25,20 @@ public class TokenizedCheckoutController {
         return ResponseEntity.ok(Map.of("jwt", jwt));
     }
 
+    @SuppressWarnings("unchecked")
     @PostMapping("/pay")
     public ResponseEntity<PaymentResponse> pay(@RequestBody Map<String, Object> body) {
         String transientToken = (String) body.get("transientToken");
-        double amount = ((Number) body.getOrDefault("amount", 0.0)).doubleValue();
-        String currency = (String) body.getOrDefault("currency", "ZAR");
-        return ResponseEntity.ok(tokenizedCheckoutService.payWithTransientToken(transientToken, amount, currency));
-    }
-
-    @SuppressWarnings("unchecked")
-    @PostMapping("/pay-default")
-    public ResponseEntity<PaymentResponse> payDefault(@RequestBody Map<String, Object> body) {
-        double amount = ((Number) body.getOrDefault("amount", 0.0)).doubleValue();
+        double amount = parseAmount(body.get("amount"));
         String currency = (String) body.getOrDefault("currency", "ZAR");
         Map<String, String> threeDsData = (Map<String, String>) body.get("threeDsData");
-        return ResponseEntity.ok(tokenizedCheckoutService.payWithDefaultCard(amount, currency, threeDsData));
+        return ResponseEntity.ok(tokenizedCheckoutService.payWithTransientToken(transientToken, amount, currency, threeDsData));
+    }
+
+
+    private double parseAmount(Object value) {
+        if (value instanceof Number n) return n.doubleValue();
+        if (value instanceof String s) return Double.parseDouble(s);
+        return 0.0;
     }
 }

@@ -48,7 +48,7 @@ public class PayerAuthController {
         Map<String, String> card = payerAuthService.lookupCard(cardSuffix);
         if (card == null) throw new IllegalArgumentException("Unknown card suffix: " + cardSuffix);
 
-        String amount = (String) body.get("amount");
+        String amount = String.valueOf(body.get("amount"));
         String currency = (String) body.getOrDefault("currency", "ZAR");
         String referenceId = (String) body.get("referenceId");
 
@@ -91,7 +91,7 @@ public class PayerAuthController {
     public ResponseEntity<Map<String, Object>> checkEnrollmentWithToken(@RequestBody Map<String, Object> body,
                                                                         HttpServletRequest request) {
         String transientToken = (String) body.get("transientToken");
-        String amount = (String) body.get("amount");
+        String amount = String.valueOf(body.get("amount"));
         String currency = (String) body.getOrDefault("currency", "ZAR");
         String referenceId = (String) body.get("referenceId");
 

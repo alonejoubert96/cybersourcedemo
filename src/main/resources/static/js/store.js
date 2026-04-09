@@ -1014,7 +1014,7 @@ function renderTokenizedCheckoutForm() {
         // Card Number — pre-loaded display + hidden Flex field
         + '<div class="mb-3"><label class="wiz-field-label">Card Number <span class="text-danger">*</span></label>'
         + '<div id="flexCardPreview" onclick="showFlexCardField()" style="height:38px;border:1px solid #6f42c133;border-radius:6px;padding:6px 12px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">'
-        + '<span style="font-size:1rem;color:#212529;letter-spacing:1px;">\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 1111</span>'
+        + '<span style="font-size:1rem;color:#212529;letter-spacing:1px;">\u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 \u2022\u2022\u2022\u2022 1091</span>'
         + '<span style="font-size:.75rem;color:#6f42c1;font-weight:600;">Change</span></div>'
         + '<div id="flexCardNumber" style="height:38px;border:1px solid #6f42c133;border-radius:6px;padding:6px 12px;background:#fff;display:none;"></div>'
         + '<div id="flexCardError" class="text-danger" style="font-size:.75rem;margin-top:2px;"></div></div>'
@@ -1146,20 +1146,26 @@ function submitTokenizedCheckout() {
     var total = getTotal();
     var amount = parseFloat(total.toFixed(2)).toString();
 
-    // Default card path — use card number for 3DS setup, then pay via /pay-default
+    // Default card path — use stored token (TMS customer) for payment
     if (!_flexCardEntered) {
+        var customerId = getSavedCustomerId();
+        if (!customerId) {
+            var el = document.getElementById('flexResult');
+            el.style.display = 'block';
+            el.innerHTML = '<div class="alert alert-warning">No saved cards found. Please enter card details above.</div>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-lock me-2"></i>Pay with Tokenized Card';
+            return;
+        }
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Initiating bank verification...';
-        // Use saved card 3DS endpoints with the default card registered at seed time
-        callApi('/api/3ds/setup', 'POST', { cardSuffix: '1111' }).then(function(result) {
+        callApi('/api/3ds/setup', 'POST', { cardSuffix: '1091' }).then(function(result) {
             if (!result.ok || !result.data.accessToken) {
-                // 3DS not available — pay directly
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing payment...';
-                callApi('/api/tokenized-checkout/pay-default', 'POST', { amount: amount, currency: 'ZAR' }).then(function(r) {
+                callApi('/api/tokens/pay', 'POST', { customerId: customerId, amount: parseFloat(amount), currency: 'ZAR' }).then(function(r) {
                     handleTokenizedCheckoutResult(r, total, btn);
                 });
                 return;
             }
-            // Run 3DS flow then pay with default card
             runTokenized3ds(result.data, amount, 'default', null, btn, total);
         });
         return;
@@ -1250,7 +1256,7 @@ function tokenized3dsEnroll(referenceId, amount, mode, transientToken, btn, tota
 
     var enrollUrl = mode === 'default' ? '/api/3ds/enroll' : '/api/3ds/token/enroll';
     var enrollBody = mode === 'default'
-        ? { cardSuffix: '1111', amount: amount, currency: 'ZAR', referenceId: referenceId, browserInfo: browserInfo }
+        ? { cardSuffix: '1091', amount: amount, currency: 'ZAR', referenceId: referenceId, browserInfo: browserInfo }
         : { transientToken: transientToken, amount: amount, currency: 'ZAR', referenceId: referenceId, browserInfo: browserInfo };
 
     callApi(enrollUrl, 'POST', enrollBody).then(function(result) {
@@ -1296,8 +1302,8 @@ function showTokenizedChallengeIframe(stepUpUrl, accessToken) {
             // For default card, use card-suffix validate; for flex, use token validate
             var validateUrl = s.mode === 'default' ? '/api/3ds/validate' : '/api/3ds/token/validate';
             var validateBody = s.mode === 'default'
-                ? { authenticationTransactionId: event.data.transactionId || s.authTransactionId, cardSuffix: '1111', amount: s.amount, currency: 'ZAR' }
-                : { authenticationTransactionId: event.data.transactionId || s.authTransactionId, cardNumber: '4111111111111111', cardType: '001', expirationMonth: '12', expirationYear: '2028', amount: s.amount, currency: 'ZAR' };
+                ? { authenticationTransactionId: event.data.transactionId || s.authTransactionId, cardSuffix: '1091', amount: s.amount, currency: 'ZAR' }
+                : { authenticationTransactionId: event.data.transactionId || s.authTransactionId, cardNumber: '4000000000001091', cardType: '001', expirationMonth: '12', expirationYear: '2028', amount: s.amount, currency: 'ZAR' };
 
             callApi(validateUrl, 'POST', validateBody).then(function(result) {
                 if (result.ok && result.data.status === 'AUTHENTICATION_SUCCESSFUL') {
@@ -1321,10 +1327,14 @@ function showTokenizedChallengeIframe(stepUpUrl, accessToken) {
 function tokenized3dsFinalPay(mode, transientToken, amount, authInfo, btn, total) {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing payment...';
 
-    var payUrl = mode === 'default' ? '/api/tokenized-checkout/pay-default' : '/api/tokenized-checkout/pay';
-    var payBody = mode === 'default'
-        ? { amount: parseFloat(amount), currency: 'ZAR', threeDsData: authInfo }
-        : { transientToken: transientToken, amount: parseFloat(amount), currency: 'ZAR', threeDsData: authInfo };
+    var payUrl, payBody;
+    if (mode === 'default') {
+        payUrl = '/api/tokens/pay';
+        payBody = { customerId: getSavedCustomerId(), amount: parseFloat(amount), currency: 'ZAR', threeDsData: authInfo };
+    } else {
+        payUrl = '/api/tokenized-checkout/pay';
+        payBody = { transientToken: transientToken, amount: parseFloat(amount), currency: 'ZAR', threeDsData: authInfo };
+    }
 
     callApi(payUrl, 'POST', payBody).then(function(result) {
         handleTokenizedCheckoutResult(result, total, btn);
@@ -1333,10 +1343,16 @@ function tokenized3dsFinalPay(mode, transientToken, amount, authInfo, btn, total
 
 function tokenized3dsFallbackPay(mode, transientToken, amount, btn, total) {
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Processing payment...';
-    var payUrl = mode === 'default' ? '/api/tokenized-checkout/pay-default' : '/api/tokenized-checkout/pay';
-    var payBody = mode === 'default'
-        ? { amount: parseFloat(amount), currency: 'ZAR' }
-        : { transientToken: transientToken, amount: parseFloat(amount), currency: 'ZAR' };
+
+    var payUrl, payBody;
+    if (mode === 'default') {
+        payUrl = '/api/tokens/pay';
+        payBody = { customerId: getSavedCustomerId(), amount: parseFloat(amount), currency: 'ZAR' };
+    } else {
+        payUrl = '/api/tokenized-checkout/pay';
+        payBody = { transientToken: transientToken, amount: parseFloat(amount), currency: 'ZAR' };
+    }
+
     callApi(payUrl, 'POST', payBody).then(function(result) {
         handleTokenizedCheckoutResult(result, total, btn);
     });
@@ -1655,7 +1671,7 @@ function renderSamsungPayForm() {
         + '<span style="opacity:.5;">\u2022\u2022\u2022\u2022</span> '
         + '<span style="opacity:.5;">\u2022\u2022\u2022\u2022</span> '
         + '<span style="opacity:.5;">\u2022\u2022\u2022\u2022</span> '
-        + '<span>1111</span></div>'
+        + '<span>1091</span></div>'
         + '<div class="d-flex justify-content-between align-items-end">'
         + '<div><div style="font-size:.6rem;opacity:.6;text-transform:uppercase;">Card Holder</div>'
         + '<div style="font-size:.85rem;">Demo Customer</div></div>'
@@ -1747,7 +1763,7 @@ function submitSamsungPay() {
     var btn = document.getElementById('spBtn');
 
     var req = {
-        dpan: '4111111111111111',
+        dpan: '4000000000001091',
         expirationMonth: '12',
         expirationYear: '2028',
         cryptogram: 'EHuWW9PiBkWvqE5juRwDzAUFBAk=',

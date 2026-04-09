@@ -47,9 +47,15 @@ public class TokenController {
     @PostMapping("/pay")
     public ResponseEntity<PaymentResponse> payWithToken(@RequestBody Map<String, Object> body) {
         String customerId = (String) body.get("customerId");
-        double amount = ((Number) body.getOrDefault("amount", 25.00)).doubleValue();
+        double amount = parseAmount(body.get("amount"));
         String currency = (String) body.getOrDefault("currency", "ZAR");
         Map<String, String> threeDsData = (Map<String, String>) body.get("threeDsData");
         return ResponseEntity.ok(tokenizedPaymentService.payWithToken(customerId, amount, currency, threeDsData));
+    }
+
+    private double parseAmount(Object value) {
+        if (value instanceof Number n) return n.doubleValue();
+        if (value instanceof String s) return Double.parseDouble(s);
+        return 0.0;
     }
 }
