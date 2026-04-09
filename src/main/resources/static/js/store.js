@@ -1473,6 +1473,167 @@ function copyPaymentLink(url) {
     });
 }
 
+// --- Apple Pay (Simulated) ---
+
+function renderApplePayForm() {
+    var total = getTotal();
+    return '<div class="wiz-card" style="border-top:3px solid #000;">'
+        + '<div class="d-flex align-items-center gap-2 mb-3">'
+        + '<div style="width:40px;height:40px;border-radius:8px;background:#000;display:flex;align-items:center;justify-content:center;">'
+        + '<svg width="18" height="22" viewBox="0 0 17 21" fill="#fff"><path d="M13.545 10.239c-.022-2.234 1.823-3.306 1.906-3.358-.037-.054-1.492-.887-2.956-.887-.777 0-1.504.228-2.106.228-.63 0-1.396-.223-2.143-.223-1.785 0-3.541 1.205-3.541 3.608 0 1.506.584 3.1 1.302 4.131.588.846 1.296 1.793 2.222 1.758.865-.035 1.2-.564 2.247-.564 1.039 0 1.341.564 2.258.546.966-.018 1.576-.862 2.147-1.714.413-.602.723-1.267.893-1.567-.02-.009-1.712-.657-1.729-2.612zM11.916 5.167c.463-.575.775-1.356.69-2.147-.666.027-1.488.457-1.964 1.017-.42.496-.8 1.307-.698 2.072.744.058 1.506-.38 1.972-.942z"/></svg></div>'
+        + '<div><div class="fw-bold">Apple Pay</div>'
+        + '</div></div>'
+        // Wallet card
+        + '<div style="background:linear-gradient(135deg,#1c1c1e 0%,#3a3a3c 100%);border-radius:12px;padding:20px;color:#fff;margin-bottom:16px;position:relative;overflow:hidden;">'
+        + '<div style="position:absolute;top:-20px;right:-20px;width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,0.05);"></div>'
+        + '<div style="position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;border-radius:50%;background:rgba(255,255,255,0.03);"></div>'
+        + '<div class="d-flex justify-content-between align-items-start mb-4">'
+        + '<span style="font-size:.75rem;opacity:.8;letter-spacing:1px;">APPLE WALLET</span>'
+        + '<svg width="16" height="20" viewBox="0 0 17 21" fill="rgba(255,255,255,0.6)"><path d="M13.545 10.239c-.022-2.234 1.823-3.306 1.906-3.358-.037-.054-1.492-.887-2.956-.887-.777 0-1.504.228-2.106.228-.63 0-1.396-.223-2.143-.223-1.785 0-3.541 1.205-3.541 3.608 0 1.506.584 3.1 1.302 4.131.588.846 1.296 1.793 2.222 1.758.865-.035 1.2-.564 2.247-.564 1.039 0 1.341.564 2.258.546.966-.018 1.576-.862 2.147-1.714.413-.602.723-1.267.893-1.567-.02-.009-1.712-.657-1.729-2.612zM11.916 5.167c.463-.575.775-1.356.69-2.147-.666.027-1.488.457-1.964 1.017-.42.496-.8 1.307-.698 2.072.744.058 1.506-.38 1.972-.942z"/></svg></div>'
+        + '<div style="font-size:1.3rem;letter-spacing:3px;margin-bottom:16px;">'
+        + '<span style="opacity:.5;">\u2022\u2022\u2022\u2022</span> '
+        + '<span style="opacity:.5;">\u2022\u2022\u2022\u2022</span> '
+        + '<span style="opacity:.5;">\u2022\u2022\u2022\u2022</span> '
+        + '<span>4242</span></div>'
+        + '<div class="d-flex justify-content-between align-items-end">'
+        + '<div><div style="font-size:.6rem;opacity:.6;text-transform:uppercase;">Card Holder</div>'
+        + '<div style="font-size:.85rem;">Demo Customer</div></div>'
+        + '<div style="text-align:right;"><div style="font-size:.6rem;opacity:.6;text-transform:uppercase;">Expires</div>'
+        + '<div style="font-size:.85rem;">09/28</div></div>'
+        + '<div style="text-align:right;font-weight:bold;font-size:1.1rem;font-style:italic;">VISA</div>'
+        + '</div></div>'
+        // Amount
+        + '<div class="text-center mb-3">'
+        + '<div class="text-muted" style="font-size:.8rem;">Amount to pay</div>'
+        + '<div class="fw-bold fs-4">' + fmt(total) + '</div></div>'
+        // Auth method selector
+        + '<div class="d-flex gap-2 mb-3">'
+        + '<button class="flex-fill border-0 py-2 rounded-2 fw-semibold apAuthOpt" data-method="faceid" onclick="selectAppleAuthMethod(\'faceid\')" style="background:#000;color:#fff;font-size:.8rem;">Face ID</button>'
+        + '<button class="flex-fill py-2 rounded-2 fw-semibold apAuthOpt" data-method="touchid" onclick="selectAppleAuthMethod(\'touchid\')" style="background:#e9ecef;color:#333;border:none;font-size:.8rem;">Touch ID</button>'
+        + '<button class="flex-fill py-2 rounded-2 fw-semibold apAuthOpt" data-method="passcode" onclick="selectAppleAuthMethod(\'passcode\')" style="background:#e9ecef;color:#333;border:none;font-size:.8rem;">Passcode</button>'
+        + '<button class="flex-fill py-2 rounded-2 fw-semibold apAuthOpt" data-method="watch" onclick="selectAppleAuthMethod(\'watch\')" style="background:#e9ecef;color:#333;border:none;font-size:.8rem;">Watch</button>'
+        + '</div>'
+        // Confirm button
+        + '<button class="w-100 border-0 py-3 rounded-2 fw-bold d-flex align-items-center justify-content-center gap-2" id="apBtn" onclick="authenticateApplePay()" style="background:#000;color:#fff;font-size:.95rem;border-radius:8px;">'
+        + '<span id="apAuthIcon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h-1a2 2 0 0 0-2 2v1m0 10v1a2 2 0 0 0 2 2h1m10-16h1a2 2 0 0 1 2 2v1m0 10v1a2 2 0 0 1-2 2h-1"/><circle cx="12" cy="10" r="3"/><path d="M12 13c-2.5 0-4 1.5-4 3v1h8v-1c0-1.5-1.5-3-4-3z"/></svg></span>'
+        + '<span id="apAuthLabel">Confirm with Face ID</span></button>'
+        + '<div id="apResult" class="mt-3" style="display:none;"></div>'
+        + '</div>';
+}
+
+var _appleAuthMethod = 'faceid';
+
+var _appleAuthConfig = {
+    faceid: {
+        label: 'Confirm with Face ID',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h-1a2 2 0 0 0-2 2v1m0 10v1a2 2 0 0 0 2 2h1m10-16h1a2 2 0 0 1 2 2v1m0 10v1a2 2 0 0 1-2 2h-1"/><circle cx="12" cy="10" r="3"/><path d="M12 13c-2.5 0-4 1.5-4 3v1h8v-1c0-1.5-1.5-3-4-3z"/></svg>',
+        authMsg: 'Scanning face...'
+    },
+    touchid: {
+        label: 'Confirm with Touch ID',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/><path d="M5 19.5C5.5 18 6 15 6 12c0-3.5 2.5-6 6-6 2 0 3.7 1 4.8 2.5"/><path d="M10 19c.5-2.5 1-5 1-7 0-1.7 1.3-3 3-3s3 1.3 3 3c0 3-1 6-2 8"/><path d="M17.5 22c.5-1.5 1-3.5 1.5-6"/></svg>',
+        authMsg: 'Scanning fingerprint...'
+    },
+    passcode: {
+        label: 'Confirm with Passcode',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/></svg>',
+        authMsg: 'Verifying passcode...'
+    },
+    watch: {
+        label: 'Double-click Side Button',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="4"/><line x1="12" y1="18" x2="12" y2="18.01"/><path d="M18 8h1m-1 4h1"/></svg>',
+        authMsg: 'Waiting for Apple Watch...'
+    }
+};
+
+function selectAppleAuthMethod(method) {
+    _appleAuthMethod = method;
+    var cfg = _appleAuthConfig[method];
+    document.getElementById('apAuthIcon').innerHTML = cfg.icon;
+    document.getElementById('apAuthLabel').textContent = cfg.label;
+    var opts = document.querySelectorAll('.apAuthOpt');
+    for (var i = 0; i < opts.length; i++) {
+        if (opts[i].getAttribute('data-method') === method) {
+            opts[i].style.background = '#000';
+            opts[i].style.color = '#fff';
+        } else {
+            opts[i].style.background = '#e9ecef';
+            opts[i].style.color = '#333';
+        }
+    }
+}
+
+function authenticateApplePay() {
+    if (getCartCount() === 0) {
+        var el = document.getElementById('apResult');
+        el.style.display = 'block';
+        el.innerHTML = '<div class="alert alert-warning">Your cart is empty. Please add items before paying.</div>';
+        return;
+    }
+
+    var cfg = _appleAuthConfig[_appleAuthMethod];
+    var btn = document.getElementById('apBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + cfg.authMsg;
+
+    setTimeout(function() {
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Authenticated — Processing payment...';
+        submitApplePay();
+    }, 1500);
+}
+
+function submitApplePay() {
+    var btn = document.getElementById('apBtn');
+    var total = getTotal();
+
+    var req = {
+        dpan: '4242424242424242',
+        expirationMonth: '09',
+        expirationYear: '2028',
+        cryptogram: 'EHuWW9PiBkWvqE5juRwDzAUFBAk=',
+        cardType: '001',
+        amount: parseFloat(total.toFixed(2)),
+        currency: 'ZAR'
+    };
+
+    callApi('/api/samsung-pay', 'POST', req).then(function(result) {
+        if (result.ok) {
+            clearCart();
+            var now = new Date();
+            var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+            var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+            var ref = (result.data.transactionId || '').slice(-8).toUpperCase();
+
+            document.getElementById('sidebarContent').innerHTML =
+                '<div class="text-center py-3">'
+                + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
+                + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
+                + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
+                + '<p class="text-muted mb-0" style="font-size:.9rem;">Thank you for your purchase!</p>'
+                + '</div>'
+                + '<div class="wiz-card mt-2">'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + fmt(total) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
+                + '<hr><div class="d-flex align-items-center gap-3">'
+                + '<div style="font-size:1.4rem;"><svg width="18" height="22" viewBox="0 0 17 21" fill="#000"><path d="M13.545 10.239c-.022-2.234 1.823-3.306 1.906-3.358-.037-.054-1.492-.887-2.956-.887-.777 0-1.504.228-2.106.228-.63 0-1.396-.223-2.143-.223-1.785 0-3.541 1.205-3.541 3.608 0 1.506.584 3.1 1.302 4.131.588.846 1.296 1.793 2.222 1.758.865-.035 1.2-.564 2.247-.564 1.039 0 1.341.564 2.258.546.966-.018 1.576-.862 2.147-1.714.413-.602.723-1.267.893-1.567-.02-.009-1.712-.657-1.729-2.612zM11.916 5.167c.463-.575.775-1.356.69-2.147-.666.027-1.488.457-1.964 1.017-.42.496-.8 1.307-.698 2.072.744.058 1.506-.38 1.972-.942z"/></svg></div>'
+                + '<div><div class="fw-semibold" style="font-size:.9rem;">Apple Pay</div>'
+                + '<div class="text-muted" style="font-size:.8rem;">Visa ending in 4242</div></div></div>'
+                + '</div>'
+                + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
+                + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
+        } else {
+            var el = document.getElementById('apResult');
+            el.style.display = 'block';
+            el.innerHTML = '<div class="alert alert-danger"><strong>Payment Failed</strong><br>'
+                + esc(result.data.message || 'Could not process payment.') + '</div>';
+            btn.disabled = false;
+            btn.innerHTML = 'Confirm with Face ID';
+        }
+    });
+}
+
 // --- Samsung Pay ---
 
 function renderSamsungPayForm() {
@@ -1506,17 +1667,61 @@ function renderSamsungPayForm() {
         + '<div class="text-center mb-3">'
         + '<div class="text-muted" style="font-size:.8rem;">Amount to pay</div>'
         + '<div class="fw-bold fs-4">' + fmt(total) + '</div></div>'
-        // Fingerprint button
+        // Auth method selector
+        + '<div class="d-flex gap-2 mb-3">'
+        + '<button class="flex-fill border-0 py-2 rounded-2 fw-semibold spAuthOpt" data-method="fingerprint" onclick="selectSamsungAuthMethod(\'fingerprint\')" style="background:#1428A0;color:#fff;font-size:.8rem;">Fingerprint</button>'
+        + '<button class="flex-fill py-2 rounded-2 fw-semibold spAuthOpt" data-method="iris" onclick="selectSamsungAuthMethod(\'iris\')" style="background:#e9ecef;color:#333;border:none;font-size:.8rem;">Iris Scan</button>'
+        + '<button class="flex-fill py-2 rounded-2 fw-semibold spAuthOpt" data-method="pin" onclick="selectSamsungAuthMethod(\'pin\')" style="background:#e9ecef;color:#333;border:none;font-size:.8rem;">PIN</button>'
+        + '<button class="flex-fill py-2 rounded-2 fw-semibold spAuthOpt" data-method="face" onclick="selectSamsungAuthMethod(\'face\')" style="background:#e9ecef;color:#333;border:none;font-size:.8rem;">Face</button>'
+        + '</div>'
+        // Confirm button
         + '<button class="w-100 border-0 py-3 rounded-2 fw-bold d-flex align-items-center justify-content-center gap-2" id="spBtn" onclick="authenticateSamsungPay()" style="background:#1428A0;color:#fff;font-size:.95rem;">'
-        + '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-        + '<path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/>'
-        + '<path d="M5 19.5C5.5 18 6 15 6 12c0-3.5 2.5-6 6-6 2 0 3.7 1 4.8 2.5"/>'
-        + '<path d="M10 19c.5-2.5 1-5 1-7 0-1.7 1.3-3 3-3s3 1.3 3 3c0 3-1 6-2 8"/>'
-        + '<path d="M17.5 22c.5-1.5 1-3.5 1.5-6"/>'
-        + '</svg>'
-        + 'Confirm with Fingerprint</button>'
+        + '<span id="spAuthIcon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/><path d="M5 19.5C5.5 18 6 15 6 12c0-3.5 2.5-6 6-6 2 0 3.7 1 4.8 2.5"/><path d="M10 19c.5-2.5 1-5 1-7 0-1.7 1.3-3 3-3s3 1.3 3 3c0 3-1 6-2 8"/><path d="M17.5 22c.5-1.5 1-3.5 1.5-6"/></svg></span>'
+        + '<span id="spAuthLabel">Confirm with Fingerprint</span></button>'
         + '<div id="spResult" class="mt-3" style="display:none;"></div>'
         + '</div>';
+}
+
+var _samsungAuthMethod = 'fingerprint';
+
+var _samsungAuthConfig = {
+    fingerprint: {
+        label: 'Confirm with Fingerprint',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4"/><path d="M5 19.5C5.5 18 6 15 6 12c0-3.5 2.5-6 6-6 2 0 3.7 1 4.8 2.5"/><path d="M10 19c.5-2.5 1-5 1-7 0-1.7 1.3-3 3-3s3 1.3 3 3c0 3-1 6-2 8"/><path d="M17.5 22c.5-1.5 1-3.5 1.5-6"/></svg>',
+        authMsg: 'Scanning fingerprint...'
+    },
+    iris: {
+        label: 'Confirm with Iris Scan',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg>',
+        authMsg: 'Scanning iris...'
+    },
+    pin: {
+        label: 'Confirm with PIN',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1"/></svg>',
+        authMsg: 'Verifying PIN...'
+    },
+    face: {
+        label: 'Confirm with Face',
+        icon: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h-1a2 2 0 0 0-2 2v1m0 10v1a2 2 0 0 0 2 2h1m10-16h1a2 2 0 0 1 2 2v1m0 10v1a2 2 0 0 1-2 2h-1"/><circle cx="12" cy="10" r="3"/><path d="M12 13c-2.5 0-4 1.5-4 3v1h8v-1c0-1.5-1.5-3-4-3z"/></svg>',
+        authMsg: 'Scanning face...'
+    }
+};
+
+function selectSamsungAuthMethod(method) {
+    _samsungAuthMethod = method;
+    var cfg = _samsungAuthConfig[method];
+    document.getElementById('spAuthIcon').innerHTML = cfg.icon;
+    document.getElementById('spAuthLabel').textContent = cfg.label;
+    var opts = document.querySelectorAll('.spAuthOpt');
+    for (var i = 0; i < opts.length; i++) {
+        if (opts[i].getAttribute('data-method') === method) {
+            opts[i].style.background = '#1428A0';
+            opts[i].style.color = '#fff';
+        } else {
+            opts[i].style.background = '#e9ecef';
+            opts[i].style.color = '#333';
+        }
+    }
 }
 
 function authenticateSamsungPay() {
@@ -1527,11 +1732,11 @@ function authenticateSamsungPay() {
         return;
     }
 
+    var cfg = _samsungAuthConfig[_samsungAuthMethod];
     var btn = document.getElementById('spBtn');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Authenticating...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> ' + cfg.authMsg;
 
-    // Simulate fingerprint authentication delay
     setTimeout(function() {
         btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Authenticated — Processing payment...';
         submitSamsungPay();
