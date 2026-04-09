@@ -80,7 +80,7 @@ public class CheckoutUiController {
     }
 
     /**
-     * Returns a UC capture context with only PANENTRY (card-only, no Click to Pay or wallets).
+     * Returns a UC capture context with PANENTRY and Click to Pay.
      */
     @PostMapping("/api/card-only/capture-context")
     @ResponseBody
@@ -90,8 +90,7 @@ public class CheckoutUiController {
 
             ObjectNode payloadCopy = (ObjectNode) objectMapper.readTree(requestData.getPayload());
 
-            // Override to PANENTRY only
-            payloadCopy.putArray("allowedPaymentTypes").add("PANENTRY");
+            payloadCopy.putArray("allowedPaymentTypes").add("PANENTRY").add("CLICKTOPAY");
 
             // Set amount
             ((ObjectNode) payloadCopy.path("orderInformation").path("amountDetails"))

@@ -824,7 +824,7 @@ function renderCardOnlyForm() {
         + '<div><div class="fw-bold" style="color:#1a1f71;">Click to Pay</div>'
         + '</div></div>'
         + '<div class="mb-3"><label class="wiz-field-label">Email Address</label>'
-        + '<input type="email" id="ctpEmail" class="form-control wiz-input" value="demo@cybershop.test" style="border-color:#1a1f7133;"></div>'
+        + '<input type="email" id="ctpEmail" class="form-control wiz-input" placeholder="Enter email address" style="border-color:#1a1f7133;"></div>'
         + '<button class="w-100 border-0 py-2 rounded-2 fw-bold" id="ctpLookupBtn" onclick="ctpLookup()" style="background:#1a1f71;color:#fff;font-size:.95rem;">'
         + '<i class="bi bi-search me-2"></i>Find My Cards</button>'
         + '<div id="ctpContent" class="mt-3"></div>'
