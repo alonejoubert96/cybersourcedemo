@@ -116,8 +116,12 @@ public class CheckoutUiController {
     public String checkout(@RequestParam(value = "amount", required = false) String amount,
                            Model model) {
         try {
-            // Override the amount in the payload if provided from the cart
-            RequestData requestToUse = this.requestData;
+            // Always build a payload copy to control allowed payment types
+            ObjectNode payloadCopy = (ObjectNode) objectMapper.readTree(requestData.getPayload());
+
+            // Restrict UC widget to card entry + Google Pay only
+            payloadCopy.putArray("allowedPaymentTypes").add("PANENTRY").add("GOOGLEPAY");
+
             String totalAmount = payloadJson.path("orderInformation")
                     .path("amountDetails")
                     .path("totalAmount")
@@ -125,12 +129,12 @@ public class CheckoutUiController {
 
             if (amount != null && !amount.isBlank()) {
                 totalAmount = amount;
-                ObjectNode payloadCopy = (ObjectNode) objectMapper.readTree(requestData.getPayload());
                 ((ObjectNode) payloadCopy.path("orderInformation").path("amountDetails"))
                         .put("totalAmount", amount);
-                requestToUse = new RequestData(objectMapper.writeValueAsString(payloadCopy),
-                        requestData.getHeaders());
             }
+
+            RequestData requestToUse = new RequestData(
+                    objectMapper.writeValueAsString(payloadCopy), requestData.getHeaders());
 
             // CyberSource round-trip: get capture context JWT
             String jwt = captureContextService.getCaptureContext(requestToUse);
