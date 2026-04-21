@@ -1809,6 +1809,109 @@ function submitSamsungPay() {
     });
 }
 
+// --- Direct API Card Payment ---
+
+function renderDirectApiForm() {
+    var total = getTotal();
+    return '<div class="wiz-card" style="border-top:3px solid #dc3545;">'
+        + '<div class="d-flex align-items-center gap-2 mb-3">'
+        + '<div style="width:40px;height:40px;border-radius:8px;background:#dc3545;display:flex;align-items:center;justify-content:center;">'
+        + '<i class="bi bi-code-slash" style="color:#fff;font-size:1.2rem;"></i></div>'
+        + '<div><div class="fw-bold" style="color:#dc3545;">Direct API Card Payment</div>'
+        + '</div></div>'
+        + '<div class="alert alert-warning py-2 mb-3" style="font-size:.8rem;">'
+        + '<i class="bi bi-exclamation-triangle me-1"></i>'
+        + '<strong>SAQ D</strong> — Raw card data passes through the merchant\'s server. Highest PCI compliance burden.</div>'
+        + '<div class="mb-3"><label class="wiz-field-label">Card Number</label>'
+        + '<input type="text" id="daCardNumber" class="form-control wiz-input" placeholder="Enter card number" maxlength="19"></div>'
+        + '<div class="row mb-3">'
+        + '<div class="col-4"><label class="wiz-field-label">Month</label>'
+        + '<input type="text" id="daExpMonth" class="form-control wiz-input" placeholder="MM" maxlength="2"></div>'
+        + '<div class="col-4"><label class="wiz-field-label">Year</label>'
+        + '<input type="text" id="daExpYear" class="form-control wiz-input" placeholder="YYYY" maxlength="4"></div>'
+        + '<div class="col-4"><label class="wiz-field-label">CVV</label>'
+        + '<input type="text" id="daCvv" class="form-control wiz-input" placeholder="CVV" maxlength="4"></div>'
+        + '</div>'
+        + '<div class="text-center mb-3">'
+        + '<div class="text-muted" style="font-size:.8rem;">Amount to pay</div>'
+        + '<div class="fw-bold fs-4">' + fmt(total) + '</div></div>'
+        + '<button class="w-100 border-0 py-3 rounded-2 fw-bold" id="daPayBtn" onclick="submitDirectApi()" style="background:#dc3545;color:#fff;font-size:.95rem;">'
+        + '<i class="bi bi-send me-2"></i>Pay with Direct API</button>'
+        + '<div id="daResult" class="mt-3" style="display:none;"></div>'
+        + '</div>';
+}
+
+function submitDirectApi() {
+    var cardNumber = document.getElementById('daCardNumber').value.trim();
+    var expMonth = document.getElementById('daExpMonth').value.trim();
+    var expYear = document.getElementById('daExpYear').value.trim();
+    var cvv = document.getElementById('daCvv').value.trim();
+
+    if (!cardNumber || !expMonth || !expYear || !cvv) {
+        var el = document.getElementById('daResult');
+        el.style.display = 'block';
+        el.innerHTML = '<div class="alert alert-warning">Please fill in all card fields.</div>';
+        return;
+    }
+
+    if (getCartCount() === 0) {
+        var el = document.getElementById('daResult');
+        el.style.display = 'block';
+        el.innerHTML = '<div class="alert alert-warning">Your cart is empty. Please add items before paying.</div>';
+        return;
+    }
+
+    var btn = document.getElementById('daPayBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending to CyberSource...';
+
+    var total = getTotal();
+    callApi('/api/direct/pay', 'POST', {
+        cardNumber: cardNumber,
+        expirationMonth: expMonth,
+        expirationYear: expYear,
+        cvv: cvv,
+        amount: parseFloat(total.toFixed(2)),
+        currency: 'ZAR'
+    }).then(function(result) {
+        if (result.ok) {
+            clearCart();
+            var now = new Date();
+            var dateStr = now.toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' });
+            var timeStr = now.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' });
+            var ref = (result.data.transactionId || '').slice(-8).toUpperCase();
+            var suffix = cardNumber.slice(-4);
+
+            document.getElementById('sidebarContent').innerHTML =
+                '<div class="text-center py-3">'
+                + '<div style="width:64px;height:64px;border-radius:50%;background:#d4edda;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">'
+                + '<i class="bi bi-check-lg" style="font-size:2rem;color:#198754;"></i></div>'
+                + '<h5 class="fw-bold mb-1">Payment Successful</h5>'
+                + '<p class="text-muted mb-0" style="font-size:.9rem;">Direct API — raw card data sent server-to-server</p>'
+                + '</div>'
+                + '<div class="wiz-card mt-2">'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Amount Paid</span><span class="fw-bold fs-5" style="color:var(--cs-primary);">' + fmt(total) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Reference</span><span class="fw-semibold" style="font-family:monospace;">#' + esc(ref) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Date</span><span class="fw-semibold">' + esc(dateStr) + '</span></div>'
+                + '<div class="d-flex justify-content-between mb-2"><span class="text-muted">Time</span><span class="fw-semibold">' + esc(timeStr) + '</span></div>'
+                + '<hr><div class="d-flex align-items-center gap-3">'
+                + '<div style="font-size:1.4rem;color:#dc3545;"><i class="bi bi-code-slash"></i></div>'
+                + '<div><div class="fw-semibold" style="font-size:.9rem;color:#dc3545;">Direct API</div>'
+                + '<div class="text-muted" style="font-size:.8rem;">Card ending in ' + esc(suffix) + '</div></div></div>'
+                + '</div>'
+                + '<button class="btn btn-outline-primary w-100 mt-3" onclick="window.location.href=\'/\'">'
+                + '<i class="bi bi-bag me-2"></i>Continue Shopping</button>';
+        } else {
+            var el = document.getElementById('daResult');
+            el.style.display = 'block';
+            el.innerHTML = '<div class="alert alert-danger"><strong>Payment Failed</strong><br>'
+                + esc(result.data.message || 'Could not process payment.') + '</div>';
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send me-2"></i>Pay with Direct API';
+        }
+    });
+}
+
 function wizardBack() {
     window.location.href = '/cart';
 }

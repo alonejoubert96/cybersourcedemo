@@ -30,41 +30,41 @@
         <div id="ucConfirmation" style="display:none;"></div>
     </div>
 
-    <!-- Apple Pay -->
-    <div class="wiz-card" style="padding:12px;">
-        <div class="payment-method-item" onclick="openCustomSidebar('applePay')">
-            <div class="method-icon"><svg width="28" height="34" viewBox="0 0 17 21" fill="#fff"><path d="M13.545 10.239c-.022-2.234 1.823-3.306 1.906-3.358-.037-.054-1.492-.887-2.956-.887-.777 0-1.504.228-2.106.228-.63 0-1.396-.223-2.143-.223-1.785 0-3.541 1.205-3.541 3.608 0 1.506.584 3.1 1.302 4.131.588.846 1.296 1.793 2.222 1.758.865-.035 1.2-.564 2.247-.564 1.039 0 1.341.564 2.258.546.966-.018 1.576-.862 2.147-1.714.413-.602.723-1.267.893-1.567-.02-.009-1.712-.657-1.729-2.612zM11.916 5.167c.463-.575.775-1.356.69-2.147-.666.027-1.488.457-1.964 1.017-.42.496-.8 1.307-.698 2.072.744.058 1.506-.38 1.972-.942z"/></svg></div>
-            <div class="method-label">Pay</div>
-        </div>
-    </div>
-
     <!-- Other Payment Options -->
     <div class="wiz-card">
         <div class="wiz-label">OTHER PAYMENT OPTIONS</div>
         <div class="payment-method-list">
+            <div class="payment-method-item" onclick="openCustomSidebar('applePay')">
+                <div class="method-icon"><svg width="24" height="29" viewBox="0 0 17 21" fill="#fff"><path d="M13.545 10.239c-.022-2.234 1.823-3.306 1.906-3.358-.037-.054-1.492-.887-2.956-.887-.777 0-1.504.228-2.106.228-.63 0-1.396-.223-2.143-.223-1.785 0-3.541 1.205-3.541 3.608 0 1.506.584 3.1 1.302 4.131.588.846 1.296 1.793 2.222 1.758.865-.035 1.2-.564 2.247-.564 1.039 0 1.341.564 2.258.546.966-.018 1.576-.862 2.147-1.714.413-.602.723-1.267.893-1.567-.02-.009-1.712-.657-1.729-2.612zM11.916 5.167c.463-.575.775-1.356.69-2.147-.666.027-1.488.457-1.964 1.017-.42.496-.8 1.307-.698 2.072.744.058 1.506-.38 1.972-.942z"/></svg></div>
+                <div class="method-label">Apple Pay</div>
+            </div>
+            <div class="payment-method-item" onclick="openCustomSidebar('samsungPay')">
+                <div class="method-icon"><i class="bi bi-phone"></i></div>
+                <div class="method-label">Samsung Pay</div>
+            </div>
+            <div class="payment-method-item" onclick="openCustomSidebar('invoice')">
+                <div class="method-icon"><i class="bi bi-receipt"></i></div>
+                <div class="method-label">Pay by Invoice</div>
+            </div>
+            <div class="payment-method-item" onclick="openCustomSidebar('paymentLink')">
+                <div class="method-icon"><i class="bi bi-link-45deg"></i></div>
+                <div class="method-label">Payment Link</div>
+            </div>
             <div class="payment-method-item" onclick="openCustomSidebar('cardOnly')">
                 <div class="method-icon"><i class="bi bi-credit-card"></i></div>
                 <div class="method-label">Click to Pay</div>
             </div>
             <div class="payment-method-item" onclick="openCustomSidebar('tokenizedCheckout')">
                 <div class="method-icon"><i class="bi bi-credit-card-2-front"></i></div>
-                <div class="method-label">Tokenized Card</div>
-            </div>
-            <div class="payment-method-item" onclick="openCustomSidebar('paymentLink')">
-                <div class="method-icon"><i class="bi bi-link-45deg"></i></div>
-                <div class="method-label">Payment Link</div>
-            </div>
-            <div class="payment-method-item" onclick="openCustomSidebar('invoice')">
-                <div class="method-icon"><i class="bi bi-receipt"></i></div>
-                <div class="method-label">Pay by Invoice</div>
-            </div>
-            <div class="payment-method-item" onclick="openCustomSidebar('samsungPay')">
-                <div class="method-icon"><i class="bi bi-phone"></i></div>
-                <div class="method-label">Samsung Pay</div>
+                <div class="method-label">Flex Microform Card Payment</div>
             </div>
             <div class="payment-method-item" onclick="openCustomSidebar('token')">
                 <div class="method-icon"><i class="bi bi-shield-lock"></i></div>
-                <div class="method-label">Saved Card</div>
+                <div class="method-label">Saved Card (TMS)</div>
+            </div>
+            <div class="payment-method-item" onclick="openCustomSidebar('directApi')">
+                <div class="method-icon"><i class="bi bi-code-slash"></i></div>
+                <div class="method-label">Direct API Card Payment</div>
             </div>
         </div>
     </div>
@@ -230,11 +230,12 @@
         var titles = {
             applePay: 'Apple Pay',
             cardOnly: 'Click to Pay',
-            token: 'Saved Card',
+            token: 'Saved Card (TMS)',
             invoice: 'Pay by Invoice',
             paymentLink: 'Payment Link',
             samsungPay: 'Samsung Pay',
-            tokenizedCheckout: 'Tokenized Card'
+            tokenizedCheckout: 'Flex Microform Card Payment',
+            directApi: 'Direct API Card Payment'
         };
         var renderers = {
             applePay: renderApplePayForm,
@@ -243,7 +244,8 @@
             invoice: renderInvoiceForm,
             paymentLink: renderPaymentLinkForm,
             samsungPay: renderSamsungPayForm,
-            tokenizedCheckout: renderTokenizedCheckoutForm
+            tokenizedCheckout: renderTokenizedCheckoutForm,
+            directApi: renderDirectApiForm
         };
 
         document.getElementById('paymentSidebarLabel').textContent = titles[method];
