@@ -21,10 +21,11 @@ public class TokenizedPaymentService {
     private final ApiClientFactory apiClientFactory;
 
     public PaymentResponse payWithToken(String customerId, double amount, String currency) {
-        return payWithToken(customerId, amount, currency, null);
+        return payWithToken(customerId, null, amount, currency, null);
     }
 
-    public PaymentResponse payWithToken(String customerId, double amount, String currency,
+    public PaymentResponse payWithToken(String customerId, String paymentInstrumentId,
+                                         double amount, String currency,
                                          Map<String, String> threeDsData) {
         try {
             ApiClient apiClient = apiClientFactory.create();
@@ -46,6 +47,11 @@ public class TokenizedPaymentService {
             Ptsv2paymentsPaymentInformationCustomer customer = new Ptsv2paymentsPaymentInformationCustomer();
             customer.id(customerId);
             paymentInfo.customer(customer);
+            if (paymentInstrumentId != null && !paymentInstrumentId.isBlank()) {
+                Ptsv2paymentsPaymentInformationPaymentInstrument paymentInstrument = new Ptsv2paymentsPaymentInformationPaymentInstrument();
+                paymentInstrument.id(paymentInstrumentId);
+                paymentInfo.paymentInstrument(paymentInstrument);
+            }
             paymentRequest.paymentInformation(paymentInfo);
 
             Ptsv2paymentsOrderInformation orderInfo = new Ptsv2paymentsOrderInformation();
@@ -66,8 +72,12 @@ public class TokenizedPaymentService {
                 if (threeDsData.get("specificationVersion") != null) consumerAuth.paSpecificationVersion(threeDsData.get("specificationVersion"));
                 if (threeDsData.get("directoryServerTransactionId") != null) consumerAuth.directoryServerTransactionId(threeDsData.get("directoryServerTransactionId"));
                 if (threeDsData.get("authenticationTransactionId") != null) consumerAuth.authenticationTransactionId(threeDsData.get("authenticationTransactionId"));
+                if (threeDsData.get("ucafAuthenticationData") != null) consumerAuth.ucafAuthenticationData(threeDsData.get("ucafAuthenticationData"));
+                if (threeDsData.get("ucafCollectionIndicator") != null) consumerAuth.ucafCollectionIndicator(threeDsData.get("ucafCollectionIndicator"));
                 paymentRequest.consumerAuthenticationInformation(consumerAuth);
-                log.info("Payment includes 3DS data — indicator: {}, paresStatus: {}", threeDsData.get("indicator"), threeDsData.get("paresStatus"));
+                log.info("Payment includes 3DS data — indicator: {}, paresStatus: {}, ucaf: {}",
+                        threeDsData.get("indicator"), threeDsData.get("paresStatus"),
+                        threeDsData.get("ucafAuthenticationData") != null ? "yes" : "no");
             }
 
             PaymentsApi api = new PaymentsApi(apiClient);

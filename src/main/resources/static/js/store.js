@@ -130,7 +130,10 @@ function renderCartPage() {
 
 function goToCheckout() {
     if (getCartCount() === 0) return;
-    window.location.href = '/checkout?amount=' + getTotal().toFixed(2);
+    var url = '/checkout?amount=' + getTotal().toFixed(2);
+    var customerId = getSavedCustomerId();
+    if (customerId) url += '&customerId=' + encodeURIComponent(customerId);
+    window.location.href = url;
 }
 
 // --- helpers for API calls ---
@@ -563,6 +566,7 @@ function threeDsFinalPayment(authInfo) {
 
     callApi('/api/tokens/pay', 'POST', {
         customerId: _threeDsState.customerId,
+        paymentInstrumentId: card.paymentInstrumentId,
         amount: parseFloat(total.toFixed(2)),
         currency: 'ZAR',
         threeDsData: authInfo
@@ -625,6 +629,7 @@ function threeDsFallbackPayment(msg) {
 
     callApi('/api/tokens/pay', 'POST', {
         customerId: _threeDsState.customerId,
+        paymentInstrumentId: card.paymentInstrumentId,
         amount: parseFloat(total.toFixed(2)),
         currency: 'ZAR'
     }).then(function(result) {

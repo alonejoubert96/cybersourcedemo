@@ -43,6 +43,8 @@ public class TokenizedCheckoutService {
                 if (threeDsData.get("specificationVersion") != null) consumerAuth.paSpecificationVersion(threeDsData.get("specificationVersion"));
                 if (threeDsData.get("directoryServerTransactionId") != null) consumerAuth.directoryServerTransactionId(threeDsData.get("directoryServerTransactionId"));
                 if (threeDsData.get("authenticationTransactionId") != null) consumerAuth.authenticationTransactionId(threeDsData.get("authenticationTransactionId"));
+                if (threeDsData.get("ucafAuthenticationData") != null) consumerAuth.ucafAuthenticationData(threeDsData.get("ucafAuthenticationData"));
+                if (threeDsData.get("ucafCollectionIndicator") != null) consumerAuth.ucafCollectionIndicator(threeDsData.get("ucafCollectionIndicator"));
                 if (threeDsData.get("indicator") != null) processingInfo.commerceIndicator(threeDsData.get("indicator"));
                 paymentRequest.consumerAuthenticationInformation(consumerAuth);
             }

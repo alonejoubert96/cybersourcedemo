@@ -60,7 +60,7 @@ public class PayerAuthService {
 
             PayerAuthSetupRequest request = new PayerAuthSetupRequest();
 
-            Riskv1authenticationsetupsClientReferenceInformation clientRef = new Riskv1authenticationsetupsClientReferenceInformation();
+            Riskv1decisionsClientReferenceInformation clientRef = new Riskv1decisionsClientReferenceInformation();
             clientRef.code("3ds-" + UUID.randomUUID().toString().substring(0, 8));
             request.clientReferenceInformation(clientRef);
 
@@ -86,7 +86,7 @@ public class PayerAuthService {
 
             PayerAuthSetupRequest request = new PayerAuthSetupRequest();
 
-            Riskv1authenticationsetupsClientReferenceInformation clientRef = new Riskv1authenticationsetupsClientReferenceInformation();
+            Riskv1decisionsClientReferenceInformation clientRef = new Riskv1decisionsClientReferenceInformation();
             clientRef.code("3ds-" + UUID.randomUUID().toString().substring(0, 8));
             request.clientReferenceInformation(clientRef);
 
@@ -182,7 +182,7 @@ public class PayerAuthService {
                                                                      String returnUrl, Map<String, String> browserInfo) {
         CheckPayerAuthEnrollmentRequest request = new CheckPayerAuthEnrollmentRequest();
 
-        Riskv1authenticationsetupsClientReferenceInformation clientRef = new Riskv1authenticationsetupsClientReferenceInformation();
+        Riskv1decisionsClientReferenceInformation clientRef = new Riskv1decisionsClientReferenceInformation();
         clientRef.code("3ds-enroll-" + UUID.randomUUID().toString().substring(0, 8));
         request.clientReferenceInformation(clientRef);
 
@@ -253,6 +253,8 @@ public class PayerAuthService {
             authData.put("directoryServerTransactionId", authInfo.getDirectoryServerTransactionId());
             authData.put("indicator", authInfo.getEcommerceIndicator());
             authData.put("pareq", authInfo.getPareq());
+            authData.put("ucafAuthenticationData", authInfo.getUcafAuthenticationData());
+            authData.put("ucafCollectionIndicator", authInfo.getUcafCollectionIndicator());
             response.put("authenticationInformation", authData);
         }
 
@@ -278,7 +280,7 @@ public class PayerAuthService {
 
             ValidateRequest request = new ValidateRequest();
 
-            Riskv1authenticationsetupsClientReferenceInformation clientRef = new Riskv1authenticationsetupsClientReferenceInformation();
+            Riskv1decisionsClientReferenceInformation clientRef = new Riskv1decisionsClientReferenceInformation();
             clientRef.code("3ds-validate-" + UUID.randomUUID().toString().substring(0, 8));
             request.clientReferenceInformation(clientRef);
 
@@ -324,6 +326,8 @@ public class PayerAuthService {
                 authData.put("specificationVersion", authInfo.getSpecificationVersion());
                 authData.put("directoryServerTransactionId", authInfo.getDirectoryServerTransactionId());
                 authData.put("indicator", authInfo.getIndicator());
+                authData.put("ucafAuthenticationData", authInfo.getUcafAuthenticationData());
+                authData.put("ucafCollectionIndicator", authInfo.getUcafCollectionIndicator());
                 response.put("authenticationInformation", authData);
             }
 

@@ -114,10 +114,9 @@ public class CheckoutUiController {
 
     @GetMapping("/checkout")
     public String checkout(@RequestParam(value = "amount", required = false) String amount,
+                           @RequestParam(value = "customerId", required = false) String customerId,
                            Model model) {
         try {
-            // Override the amount in the payload if provided from the cart
-            RequestData requestToUse = this.requestData;
             String totalAmount = payloadJson.path("orderInformation")
                     .path("amountDetails")
                     .path("totalAmount")
@@ -125,15 +124,21 @@ public class CheckoutUiController {
 
             if (amount != null && !amount.isBlank()) {
                 totalAmount = amount;
-                ObjectNode payloadCopy = (ObjectNode) objectMapper.readTree(requestData.getPayload());
-                ((ObjectNode) payloadCopy.path("orderInformation").path("amountDetails"))
-                        .put("totalAmount", amount);
-                requestToUse = new RequestData(objectMapper.writeValueAsString(payloadCopy),
-                        requestData.getHeaders());
             }
 
-            // CyberSource round-trip: get capture context JWT
-            String jwt = captureContextService.getCaptureContext(requestToUse);
+            // Build allowed payment types — include TMSTOKEN if customer has saved cards
+            java.util.List<String> paymentTypes = new java.util.ArrayList<>(
+                    java.util.List.of("PANENTRY", "CLICKTOPAY", "GOOGLEPAY", "APPLEPAY"));
+            if (customerId != null && !customerId.isBlank()) {
+                paymentTypes.add("TMS_TOKEN");
+            }
+
+            // UC v1: Use Sessions API with clientVersion 1.0
+            String jwt = captureContextService.getCaptureContextV1(
+                    paymentTypes,
+                    totalAmount,
+                    "ZAR",
+                    customerId);
 
             // Extract client library URL + integrity hash from JWT
             Map<String, String> jwtDetails = jwtProcessorService.processAndPrintJwt(jwt);

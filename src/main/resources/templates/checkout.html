@@ -26,13 +26,23 @@
     <!-- Unified Checkout -->
     <div class="wiz-card">
         <div class="wiz-label">UNIFIED CHECKOUT</div>
-        <div id="ucWidgetContainer"></div>
+        <div id="ucWidgetContainer" style="margin:-1px -1px 0;overflow:hidden;"></div>
         <div id="ucConfirmation" style="display:none;"></div>
     </div>
 
     <!-- Other Payment Options -->
     <div class="wiz-card">
-        <div class="wiz-label">OTHER PAYMENT OPTIONS</div>
+        <button class="btn btn-link w-100 d-flex justify-content-between align-items-center p-0 text-decoration-none"
+                style="color:inherit;"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#otherPaymentOptions"
+                aria-expanded="false"
+                aria-controls="otherPaymentOptions">
+            <span class="wiz-label mb-0">OTHER PAYMENT OPTIONS</span>
+            <i class="bi bi-chevron-down"></i>
+        </button>
+        <div class="collapse mt-3" id="otherPaymentOptions">
         <div class="payment-method-list">
             <div class="payment-method-item" onclick="openCustomSidebar('applePay')">
                 <div class="method-icon"><svg width="24" height="29" viewBox="0 0 17 21" fill="#fff"><path d="M13.545 10.239c-.022-2.234 1.823-3.306 1.906-3.358-.037-.054-1.492-.887-2.956-.887-.777 0-1.504.228-2.106.228-.63 0-1.396-.223-2.143-.223-1.785 0-3.541 1.205-3.541 3.608 0 1.506.584 3.1 1.302 4.131.588.846 1.296 1.793 2.222 1.758.865-.035 1.2-.564 2.247-.564 1.039 0 1.341.564 2.258.546.966-.018 1.576-.862 2.147-1.714.413-.602.723-1.267.893-1.567-.02-.009-1.712-.657-1.729-2.612zM11.916 5.167c.463-.575.775-1.356.69-2.147-.666.027-1.488.457-1.964 1.017-.42.496-.8 1.307-.698 2.072.744.058 1.506-.38 1.972-.942z"/></svg></div>
@@ -66,6 +76,7 @@
                 <div class="method-icon"><i class="bi bi-code-slash"></i></div>
                 <div class="method-label">Direct API Card Payment</div>
             </div>
+        </div>
         </div>
     </div>
 
@@ -134,60 +145,66 @@
     }
 
 
-    // Initialize UC widget inline on page load
+    // Initialize UC v1 widget inline on page load
     async function initUcWidget() {
         try {
-            var accept = await Accept(jwt);
-            var up = await accept.unifiedPayments(true);
+            // UC v1: Initialize client
+            var client = await VAS.UnifiedCheckout(jwt);
 
-            var tt = await up.show({
-                containers: { paymentSelection: "#ucWidgetContainer" }
-            });
+            // Create checkout with autoProcessing — mount() returns completed payment result
+            var checkout = await client.createCheckout({ autoProcessing: true });
 
-            var completeResponse = await up.complete(tt);
-            var parsed = parseJwt(completeResponse);
-            if (parsed) {
+            // Mount the widget — with autoProcessing + completeMandate CAPTURE,
+            // CyberSource processes the payment and mount() returns the result directly
+            var result = await checkout.mount('#ucWidgetContainer');
+
+            console.log("UC v1 payment result:", result);
+            if (result) {
                 document.getElementById('ucWidgetContainer').style.display = 'none';
                 clearCart();
-                showUcConfirmation(parsed);
+                showUcConfirmation(result);
             }
         } catch (error) {
             console.error("UC payment error:", error);
         }
     }
 
-    function showUcConfirmation(paymentDetails) {
-        var transactionId = (paymentDetails.details &&
-            paymentDetails.details.processorInformation &&
-            paymentDetails.details.processorInformation.transactionId) ||
-            paymentDetails.id || '';
-        var ref = transactionId.slice(-8).toUpperCase();
-
-        var amount = '';
-        var currency = 'ZAR';
-        if (paymentDetails.details &&
-            paymentDetails.details.orderInformation &&
-            paymentDetails.details.orderInformation.amountDetails) {
-            var ad = paymentDetails.details.orderInformation.amountDetails;
-            amount = ad.totalAmount || ad.authorizedAmount || '';
-            currency = ad.currency || 'ZAR';
+    function showUcConfirmation(data) {
+        // v1 mount() with autoProcessing may return a JWT string or an object
+        // If it's a JWT string, parse it first
+        if (typeof data === 'string') {
+            var parsed = parseJwt(data);
+            if (parsed) { data = parsed; }
         }
-        var displayAmount = amount ? (currency === 'ZAR' ? 'R' : currency + ' ') + parseFloat(amount).toFixed(2) : fmt(getTotal());
+
+        console.log("showUcConfirmation data:", JSON.stringify(data).substring(0, 500));
+
+        // Extract transaction ID from various possible paths
+        var transactionId = data.transactionId || data.id || '';
+        if (!transactionId && data.details && data.details.processorInformation) {
+            transactionId = data.details.processorInformation.transactionId || '';
+        }
+        var ref = transactionId.slice(-8).toUpperCase() || 'N/A';
+
+        var displayAmount = fmt(getTotal());
+        // Try various paths for amount
+        if (data.details && data.details.orderInformation && data.details.orderInformation.amountDetails) {
+            var ad = data.details.orderInformation.amountDetails;
+            var amt = ad.totalAmount || ad.authorizedAmount || '';
+            if (amt) displayAmount = 'R' + parseFloat(amt).toFixed(2);
+        } else if (data.orderInformation && data.orderInformation.amountDetails) {
+            var ad2 = data.orderInformation.amountDetails;
+            var amt2 = ad2.totalAmount || ad2.authorizedAmount || '';
+            if (amt2) displayAmount = 'R' + parseFloat(amt2).toFixed(2);
+        }
 
         var cardNumber = '';
         var cardType = '';
-        if (paymentDetails.details &&
-            paymentDetails.details.paymentInformation &&
-            paymentDetails.details.paymentInformation.tokenizedCard) {
-            var tc = paymentDetails.details.paymentInformation.tokenizedCard;
-            cardNumber = tc.suffix || '';
-            cardType = tc.type || '';
-        } else if (paymentDetails.details &&
-            paymentDetails.details.paymentInformation &&
-            paymentDetails.details.paymentInformation.card) {
-            var c = paymentDetails.details.paymentInformation.card;
-            cardNumber = c.suffix || '';
-            cardType = c.type || '';
+        // Try various paths for card info
+        var pi = (data.details && data.details.paymentInformation) || data.paymentInformation || data.paymentAccountInformation || null;
+        if (pi) {
+            if (pi.tokenizedCard) { cardNumber = pi.tokenizedCard.suffix || ''; cardType = pi.tokenizedCard.type || ''; }
+            else if (pi.card) { cardNumber = pi.card.suffix || ''; cardType = pi.card.type || ''; }
         }
 
         var b = { name: 'Card', icon: 'bi-credit-card', color: '#1a1f71' };

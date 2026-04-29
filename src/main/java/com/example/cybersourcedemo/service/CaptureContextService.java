@@ -33,9 +33,7 @@ public class CaptureContextService {
     }
 
     /**
-     * Calls the CyberSource API to get a capture context using the provided request data
-     * @param requestData The request data containing payload and headers
-     * @return The JWT token from the API response
+     * Calls the CyberSource v0 API to get a capture context (used by Flex Microform).
      */
     public String getCaptureContext(RequestData requestData) {
         try {
@@ -54,7 +52,6 @@ public class CaptureContextService {
             String response = apiInstance.generateUnifiedCheckoutCaptureContext(requestObj);
 
             String responseCode = apiClient.responseCode;
-            String status = apiClient.status;
 
             if (responseCode.equals("200") || responseCode.equals("201")) {
                 return response;
@@ -66,6 +63,58 @@ public class CaptureContextService {
         } catch (Exception e) {
             logger.error("Failed to get capture context", e);
             throw new RuntimeException("Failed to get capture context", e);
+        }
+    }
+
+    /**
+     * Calls the CyberSource v1 Sessions API for Unified Checkout v1.
+     * Uses /up/v1/sessions endpoint with clientVersion 1.0.
+     */
+    public String getCaptureContextV1(List<String> allowedPaymentTypes, String amount, String currency, String customerId) {
+        try {
+            MerchantConfig merchantConfig = new MerchantConfig(this.merchantProperties);
+
+            ApiClient apiClient = new ApiClient();
+            apiClient.merchantConfig = merchantConfig;
+
+            GenerateUnifiedCheckoutV1CaptureContextRequest request = new GenerateUnifiedCheckoutV1CaptureContextRequest();
+            request.targetOrigins(List.of("https://localhost:8080"));
+            request.country("ZA");
+            request.locale("en_US");
+
+            Ucv1sessionsCaptureMandate captureMandate = new Ucv1sessionsCaptureMandate();
+            captureMandate.requestShipping(false);
+            request.captureMandate(captureMandate);
+
+            Ucv1sessionsData data = new Ucv1sessionsData();
+            Ucv1sessionsDataOrderInformation orderInfo = new Ucv1sessionsDataOrderInformation();
+            Ucv1sessionsDataOrderInformationAmountDetails amountDetails = new Ucv1sessionsDataOrderInformationAmountDetails();
+            String formattedAmount = amount.contains(".") ? amount : amount + ".00";
+            if (formattedAmount.matches(".*\\.\\d$")) formattedAmount += "0";
+            amountDetails.totalAmount(formattedAmount);
+            amountDetails.currency(currency);
+            orderInfo.amountDetails(amountDetails);
+            data.orderInformation(orderInfo);
+            request.data(data);
+
+            UnifiedCheckoutV1CaptureContextApi apiInstance = new UnifiedCheckoutV1CaptureContextApi(apiClient);
+            String response = apiInstance.generateUnifiedCheckoutV1CaptureContext(request);
+
+            String responseCode = apiClient.responseCode;
+
+            if (responseCode.equals("200") || responseCode.equals("201")) {
+                return response;
+            } else {
+                logger.error("UC v1 error: {} - {}", responseCode, response);
+                throw new RuntimeException("Error calling UC v1 Sessions API: " + responseCode);
+            }
+
+        } catch (Invokers.ApiException e) {
+            logger.error("UC v1 API error [{}]: {}", e.getCode(), e.getResponseBody());
+            throw new RuntimeException("UC v1 API error: " + e.getResponseBody(), e);
+        } catch (Exception e) {
+            logger.error("Failed to get UC v1 capture context", e);
+            throw new RuntimeException("Failed to get UC v1 capture context", e);
         }
     }
 }
