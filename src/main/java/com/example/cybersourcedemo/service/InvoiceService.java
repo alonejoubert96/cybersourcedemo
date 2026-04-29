@@ -37,6 +37,8 @@ public class InvoiceService {
 
             Invoicingv2invoicesInvoiceInformation invoiceInfo = new Invoicingv2invoicesInvoiceInformation();
             invoiceInfo.description(request.getDescription());
+            invoiceInfo.deliveryMode("Email");
+            invoiceInfo.sendImmediately(true);
             if (request.getDueDate() != null) {
                 invoiceInfo.dueDate(LocalDate.parse(request.getDueDate()));
             }
